@@ -40,7 +40,8 @@ include ../common.mk
 APPNAME=proj_cm55
 
 # Force Release build — prebuilt libtesaiot_bento_cm55.a requires Release config
-CONFIG=Release
+# 'override' prevents IDE from overriding via command-line
+override CONFIG := Release
 
 # If set to "true" or "1", display full command-lines when building.
 VERBOSE=

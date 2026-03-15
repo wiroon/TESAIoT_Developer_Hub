@@ -26,7 +26,8 @@ include ../common.mk
 APPNAME=proj_cm33_ns
 
 # Force Release build — prebuilt libraries require Release config
-CONFIG=Release
+# 'override' prevents IDE from overriding via command-line
+override CONFIG := Release
 
 VERBOSE=
 
