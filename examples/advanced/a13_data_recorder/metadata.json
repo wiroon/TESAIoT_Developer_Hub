@@ -1,0 +1,10 @@
+{
+  "title": "Data Recorder",
+  "description": "Circular buffer data recorder with recording controls, live statistics, chart visualization, and CSV export preview",
+  "difficulty": "advanced",
+  "domain": "Analytics",
+  "tags": ["analytics", "real-time", "sensor", "embedded"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": true
+}

@@ -1,0 +1,11 @@
+{
+  "title": "Compass Heading",
+  "description": "BMM350 heading as degrees and cardinal direction (N, NE, E, etc.)",
+  "difficulty": "beginner",
+  "domain": "Sensors",
+  "tags": ["bmm350", "ipc", "compass"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": true,
+  "sensors_used": ["BMM350"]
+}

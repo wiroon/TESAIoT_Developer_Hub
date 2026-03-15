@@ -1,0 +1,10 @@
+{
+  "title": "Text Input",
+  "description": "Textarea with on-screen keyboard for text entry",
+  "difficulty": "beginner",
+  "domain": "UI Widgets",
+  "tags": ["lvgl", "textarea", "keyboard"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": false
+}

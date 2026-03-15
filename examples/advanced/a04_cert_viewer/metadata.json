@@ -1,0 +1,10 @@
+{
+  "title": "Certificate Viewer",
+  "description": "X.509 certificate chain viewer with parsed fields, validity status, and chain visualization",
+  "difficulty": "advanced",
+  "domain": "Security",
+  "tags": ["security", "identity-sso", "visualization"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": false
+}

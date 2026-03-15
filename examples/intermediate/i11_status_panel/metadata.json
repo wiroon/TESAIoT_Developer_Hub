@@ -1,0 +1,11 @@
+{
+  "title": "System Status Panel",
+  "description": "System status dashboard showing WiFi connection, NTP sync, sensor availability, and uptime",
+  "difficulty": "intermediate",
+  "domain": "System",
+  "tags": ["embedded", "wifi", "timer", "system"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": false,
+  "sensors_used": []
+}

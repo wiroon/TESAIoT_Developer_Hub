@@ -1,0 +1,10 @@
+{
+  "title": "Timer Stopwatch",
+  "description": "Start/Stop/Reset stopwatch displaying elapsed time in MM:SS.mmm",
+  "difficulty": "beginner",
+  "domain": "Real-Time",
+  "tags": ["timer", "button", "stopwatch"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": false
+}

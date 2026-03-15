@@ -1,0 +1,10 @@
+{
+  "title": "Reaction Game",
+  "description": "Tap when the panel turns green to measure your reaction time",
+  "difficulty": "beginner",
+  "domain": "Game",
+  "tags": ["timer", "event", "game", "reaction"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": false
+}
