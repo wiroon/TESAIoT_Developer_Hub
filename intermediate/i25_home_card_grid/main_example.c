@@ -1,9 +1,15 @@
 /**
  * @file    main_example.c
- * @brief   Home Card Grid — 6 tappable cards in 3×2 grid
+ * @brief   Home Card Grid — 6 tappable cards in 3x2 grid
  *
  * Mirrors the s_card_defs[] pattern from page_home.c.
- * Each card tap logs the target page ID.
+ * Each card tap updates a detail panel with page info.
+ *
+ * Functions:
+ *   create_grid_card()       — Build one styled card in the grid
+ *   update_tap_info()        — Update detail label with tapped card info
+ *   card_tap_cb()            — Event callback: handle card tap
+ *   example_main()           — Entry point: compose grid + detail panel
  */
 
 #include "example_common.h"
@@ -28,18 +34,57 @@ static const card_def_t s_card_defs[] = {
 
 static lv_obj_t *s_lbl_tapped;
 
-/* ── Card tap handler ────────────────────────────────────────────── */
-static void card_tap_cb(lv_event_t *e)
+/* ── Create one styled card in the grid ──────────────────────────── */
+static lv_obj_t *create_grid_card(lv_obj_t *grid, const card_def_t *d,
+                                   int col, int row)
 {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+    lv_color_t color = lv_color_hex(d->color_hex);
 
-    intptr_t id = (intptr_t)lv_event_get_user_data(e);
-    const card_def_t *def = &s_card_defs[id];
+    lv_obj_t *card = lv_obj_create(grid);
+    lv_obj_set_grid_cell(card, LV_GRID_ALIGN_STRETCH, col, 1,
+                               LV_GRID_ALIGN_STRETCH, row, 1);
+    lv_obj_set_style_bg_color(card, lv_color_hex(0x142240), 0);
+    lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(card, 12, 0);
+    lv_obj_set_style_border_width(card, 2, 0);
+    lv_obj_set_style_border_color(card, color, 0);
+    lv_obj_set_style_shadow_width(card, 8, 0);
+    lv_obj_set_style_shadow_color(card, color, 0);
+    lv_obj_set_style_shadow_opa(card, LV_OPA_30, 0);
+    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
 
+    /* Icon */
+    lv_obj_t *icon = lv_label_create(card);
+    lv_label_set_text(icon, d->icon);
+    lv_obj_set_style_text_font(icon, &lv_font_montserrat_28, 0);
+    lv_obj_set_style_text_color(icon, color, 0);
+    lv_obj_align(icon, LV_ALIGN_CENTER, 0, -12);
+
+    /* Name */
+    lv_obj_t *name = lv_label_create(card);
+    lv_label_set_text(name, d->name);
+    lv_obj_set_style_text_font(name, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(name, lv_color_white(), 0);
+    lv_obj_align(name, LV_ALIGN_BOTTOM_MID, 0, -8);
+
+    return card;
+}
+
+/* ── Update tap info label ───────────────────────────────────────── */
+static void update_tap_info(const card_def_t *def)
+{
     lv_label_set_text_fmt(s_lbl_tapped,
         "Tapped: %s (page_id=%d)\n"
         "In production: pm_navigate(&s_pm, PAGE_ID_%d)",
         def->name, def->page_id, def->page_id);
+}
+
+/* ── Card tap handler ────────────────────────────────────────────── */
+static void card_tap_cb(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+    intptr_t id = (intptr_t)lv_event_get_user_data(e);
+    update_tap_info(&s_card_defs[id]);
 }
 
 /* ── Entry point ─────────────────────────────────────────────────── */
@@ -66,37 +111,7 @@ void example_main(lv_obj_t *parent)
 
     /* Create cards from definition array */
     for (uint32_t i = 0; i < CARD_COUNT; i++) {
-        const card_def_t *d = &s_card_defs[i];
-        lv_color_t color = lv_color_hex(d->color_hex);
-
-        lv_obj_t *card = lv_obj_create(grid);
-        lv_obj_set_grid_cell(card, LV_GRID_ALIGN_STRETCH, i % 3, 1,
-                                   LV_GRID_ALIGN_STRETCH, i / 3, 1);
-        lv_obj_set_style_bg_color(card, lv_color_hex(0x142240), 0);
-        lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_border_width(card, 2, 0);
-        lv_obj_set_style_border_color(card, color, 0);
-        lv_obj_set_style_shadow_width(card, 8, 0);
-        lv_obj_set_style_shadow_color(card, color, 0);
-        lv_obj_set_style_shadow_opa(card, LV_OPA_30, 0);
-        lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
-
-        /* Icon */
-        lv_obj_t *icon = lv_label_create(card);
-        lv_label_set_text(icon, d->icon);
-        lv_obj_set_style_text_font(icon, &lv_font_montserrat_28, 0);
-        lv_obj_set_style_text_color(icon, color, 0);
-        lv_obj_align(icon, LV_ALIGN_CENTER, 0, -12);
-
-        /* Name */
-        lv_obj_t *name = lv_label_create(card);
-        lv_label_set_text(name, d->name);
-        lv_obj_set_style_text_font(name, &lv_font_montserrat_14, 0);
-        lv_obj_set_style_text_color(name, lv_color_white(), 0);
-        lv_obj_align(name, LV_ALIGN_BOTTOM_MID, 0, -8);
-
-        /* Click handler */
+        lv_obj_t *card = create_grid_card(grid, &s_card_defs[i], i % 3, i / 3);
         lv_obj_add_event_cb(card, card_tap_cb, LV_EVENT_CLICKED,
                             (void *)(intptr_t)i);
     }

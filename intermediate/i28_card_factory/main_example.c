@@ -1,12 +1,21 @@
 /**
  * @file    main_example.c
- * @brief   Card Factory — Reusable tesaiot_card_create() function
+ * @brief   Card Factory — Reusable tesaiot_card_create() with live values
  *
  * Builds styled containers matching the BENTO design system:
  * dark bg, rounded corners, accent border, shadow, title + divider.
+ * Card values update every 2 seconds via timer.
+ *
+ * Functions:
+ *   tesaiot_card_create()    — Build a dark styled card with title + divider
+ *   create_card_value()      — Add a value label to a card with styling
+ *   card_update_timer_cb()   — Timer callback: refresh card values
+ *   example_main()           — Entry point: compose 4-card layout
  */
 
 #include "example_common.h"
+
+static lv_obj_t *s_val_labels[4];
 
 /* ── Reusable card factory ───────────────────────────────────────── */
 static lv_obj_t *tesaiot_card_create(lv_obj_t *parent, const char *title,
@@ -44,6 +53,31 @@ static lv_obj_t *tesaiot_card_create(lv_obj_t *parent, const char *title,
     return card;
 }
 
+/* ── Add a value label to a card ─────────────────────────────────── */
+static lv_obj_t *create_card_value(lv_obj_t *card, const char *text,
+                                    lv_color_t color, const lv_font_t *font)
+{
+    lv_obj_t *lbl = lv_label_create(card);
+    lv_label_set_text(lbl, text);
+    lv_obj_set_style_text_font(lbl, font, 0);
+    lv_obj_set_style_text_color(lbl, color, 0);
+    lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 10);
+    return lbl;
+}
+
+/* ── Timer callback: update card values ──────────────────────────── */
+static void card_update_timer_cb(lv_timer_t *timer)
+{
+    (void)timer;
+    lv_label_set_text_fmt(s_val_labels[0], "AX: %d  AY: %d  AZ: %d mg",
+        (int)lv_rand(-50, 50), (int)lv_rand(-50, 50), (int)(981 + lv_rand(-5, 5)));
+    lv_label_set_text_fmt(s_val_labels[1], "%.1f C", 25.0f + (float)lv_rand(-20, 50) / 10.0f);
+    lv_label_set_text_fmt(s_val_labels[2], "Heading: %d  (%s)",
+        (int)lv_rand(0, 359), (lv_rand(0, 1) ? "NE" : "SW"));
+    lv_label_set_text_fmt(s_val_labels[3], LV_SYMBOL_WIFI " %s\n192.168.4.1",
+        (lv_rand(0, 5) > 0) ? "Connected" : "Reconnecting...");
+}
+
 /* ── Entry point ─────────────────────────────────────────────────── */
 void example_main(lv_obj_t *parent)
 {
@@ -57,36 +91,30 @@ void example_main(lv_obj_t *parent)
     lv_obj_t *c1 = tesaiot_card_create(parent, "IMU (BMI270)",
         lv_color_hex(0x4CAF50), 340, 150);
     lv_obj_align(c1, LV_ALIGN_CENTER, -185, -55);
-    lv_obj_t *v1 = lv_label_create(c1);
-    lv_label_set_text(v1, "AX: 0  AY: 0  AZ: 981 mg");
-    lv_obj_set_style_text_color(v1, lv_color_white(), 0);
-    lv_obj_align(v1, LV_ALIGN_CENTER, 0, 10);
+    s_val_labels[0] = create_card_value(c1, "AX: 0  AY: 0  AZ: 981 mg",
+        lv_color_white(), &lv_font_montserrat_14);
 
     /* Card 2: Temperature — top right */
     lv_obj_t *c2 = tesaiot_card_create(parent, "Temperature",
         lv_color_hex(0xFF9800), 340, 150);
     lv_obj_align(c2, LV_ALIGN_CENTER, 185, -55);
-    lv_obj_t *v2 = lv_label_create(c2);
-    lv_label_set_text(v2, "27.3 C");
-    lv_obj_set_style_text_font(v2, &lv_font_montserrat_28, 0);
-    lv_obj_set_style_text_color(v2, lv_color_hex(0xFF9800), 0);
-    lv_obj_align(v2, LV_ALIGN_CENTER, 0, 10);
+    s_val_labels[1] = create_card_value(c2, "27.3 C",
+        lv_color_hex(0xFF9800), &lv_font_montserrat_28);
 
     /* Card 3: Compass — bottom left */
     lv_obj_t *c3 = tesaiot_card_create(parent, "Compass (BMM350)",
         lv_color_hex(0xE040FB), 340, 150);
     lv_obj_align(c3, LV_ALIGN_CENTER, -185, 115);
-    lv_obj_t *v3 = lv_label_create(c3);
-    lv_label_set_text(v3, "Heading: 142  (SE)");
-    lv_obj_set_style_text_color(v3, lv_color_white(), 0);
-    lv_obj_align(v3, LV_ALIGN_CENTER, 0, 10);
+    s_val_labels[2] = create_card_value(c3, "Heading: 142  (SE)",
+        lv_color_white(), &lv_font_montserrat_14);
 
     /* Card 4: WiFi — bottom right */
     lv_obj_t *c4 = tesaiot_card_create(parent, "WiFi Status",
         lv_color_hex(0x00BCD4), 340, 150);
     lv_obj_align(c4, LV_ALIGN_CENTER, 185, 115);
-    lv_obj_t *v4 = lv_label_create(c4);
-    lv_label_set_text(v4, LV_SYMBOL_WIFI " Connected\n192.168.4.1");
-    lv_obj_set_style_text_color(v4, lv_color_hex(0x00BCD4), 0);
-    lv_obj_align(v4, LV_ALIGN_CENTER, 0, 10);
+    s_val_labels[3] = create_card_value(c4, LV_SYMBOL_WIFI " Connected\n192.168.4.1",
+        lv_color_hex(0x00BCD4), &lv_font_montserrat_14);
+
+    /* Live update every 2 seconds */
+    lv_timer_create(card_update_timer_cb, 2000, NULL);
 }

@@ -2,7 +2,13 @@
  * @file    main_example.c
  * @brief   Status Bar — Bottom bar with WiFi, board name, uptime, sensor count
  *
- * Fixed-height flex row at the bottom.  Updates every 1 second.
+ * Fixed-height flex row at the bottom. Updates every 1 second.
+ *
+ * Functions:
+ *   create_status_bar()      — Build the bottom status bar with flex layout
+ *   update_wifi_status()     — Update WiFi label text and color
+ *   status_timer_cb()        — Timer callback: refresh uptime + WiFi state
+ *   example_main()           — Entry point: compose content area + status bar
  */
 
 #include "example_common.h"
@@ -23,6 +29,40 @@ static lv_obj_t *s_lbl_wifi;
 static lv_obj_t *s_lbl_uptime;
 static bool      s_wifi_connected;
 
+/* ── Create the bottom status bar ────────────────────────────────── */
+static lv_obj_t *create_status_bar(lv_obj_t *parent, int w, int h)
+{
+    lv_obj_t *bar = lv_obj_create(parent);
+    lv_obj_set_size(bar, w, h);
+    lv_obj_align(bar, LV_ALIGN_BOTTOM_MID, 0, -2);
+    lv_obj_set_flex_flow(bar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(bar, LV_FLEX_ALIGN_SPACE_BETWEEN,
+                          LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_bg_color(bar, lv_color_hex(0x0A1628), 0);
+    lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(bar, 6, 0);
+    lv_obj_set_style_border_width(bar, 0, 0);
+    lv_obj_set_style_pad_left(bar, 12, 0);
+    lv_obj_set_style_pad_right(bar, 12, 0);
+    lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
+    return bar;
+}
+
+/* ── Update WiFi status display ──────────────────────────────────── */
+static void update_wifi_status(bool connected)
+{
+    s_wifi_connected = connected;
+    if (connected) {
+        lv_label_set_text(s_lbl_wifi, LV_SYMBOL_WIFI " Connected");
+        lv_obj_set_style_text_color(s_lbl_wifi,
+            lv_palette_main(LV_PALETTE_GREEN), 0);
+    } else {
+        lv_label_set_text(s_lbl_wifi, LV_SYMBOL_WIFI " Disconnected");
+        lv_obj_set_style_text_color(s_lbl_wifi,
+            lv_palette_main(LV_PALETTE_GREY), 0);
+    }
+}
+
 /* ── Timer — update status bar every 1 s ─────────────────────────── */
 static void status_timer_cb(lv_timer_t *timer)
 {
@@ -37,16 +77,7 @@ static void status_timer_cb(lv_timer_t *timer)
                           (unsigned)h, (unsigned)m, (unsigned)s);
 
     /* Simulate WiFi toggle every 10 seconds for demo */
-    s_wifi_connected = ((total_sec / 10) % 2) == 0;
-    if (s_wifi_connected) {
-        lv_label_set_text(s_lbl_wifi, LV_SYMBOL_WIFI " Connected");
-        lv_obj_set_style_text_color(s_lbl_wifi,
-            lv_palette_main(LV_PALETTE_GREEN), 0);
-    } else {
-        lv_label_set_text(s_lbl_wifi, LV_SYMBOL_WIFI " Disconnected");
-        lv_obj_set_style_text_color(s_lbl_wifi,
-            lv_palette_main(LV_PALETTE_GREY), 0);
-    }
+    update_wifi_status(((total_sec / 10) % 2) == 0);
 }
 
 /* ── Entry point ─────────────────────────────────────────────────── */
@@ -80,19 +111,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_center(content_lbl);
 
     /* ── Status bar ──────────────────────────────────────────────── */
-    lv_obj_t *bar = lv_obj_create(parent);
-    lv_obj_set_size(bar, 760, 36);
-    lv_obj_align(bar, LV_ALIGN_BOTTOM_MID, 0, -2);
-    lv_obj_set_flex_flow(bar, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(bar, LV_FLEX_ALIGN_SPACE_BETWEEN,
-                          LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_bg_color(bar, lv_color_hex(0x0A1628), 0);
-    lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(bar, 6, 0);
-    lv_obj_set_style_border_width(bar, 0, 0);
-    lv_obj_set_style_pad_left(bar, 12, 0);
-    lv_obj_set_style_pad_right(bar, 12, 0);
-    lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_t *bar = create_status_bar(parent, 760, 36);
 
     /* WiFi status */
     s_lbl_wifi = lv_label_create(bar);

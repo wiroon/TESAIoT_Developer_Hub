@@ -4,6 +4,12 @@
  *
  * Two style definitions (primary, secondary) are created and applied
  * to multiple buttons, demonstrating style reuse and pressed states.
+ *
+ * Functions:
+ *   init_styles()            — Initialize primary, secondary, and pressed styles
+ *   create_styled_button()   — Build a button with a given style and label
+ *   style_tap_cb()           — Event callback: show which style was tapped
+ *   example_main()           — Entry point: compose styled button grid
  */
 
 #include "example_common.h"
@@ -11,7 +17,9 @@
 static lv_style_t style_primary;
 static lv_style_t style_secondary;
 static lv_style_t style_pressed;
+static lv_obj_t  *s_lbl_info;
 
+/* ── Initialize all style definitions ────────────────────────────── */
 static void init_styles(void)
 {
     /* Primary style — blue, rounded, shadow */
@@ -40,6 +48,33 @@ static void init_styles(void)
     lv_style_set_translate_y(&style_pressed, 2);
 }
 
+/* ── Create a styled button with label ───────────────────────────── */
+static lv_obj_t *create_styled_button(lv_obj_t *parent, const char *text,
+                                       lv_style_t *style, int w, int h,
+                                       lv_align_t align, int x_ofs, int y_ofs)
+{
+    lv_obj_t *btn = lv_btn_create(parent);
+    lv_obj_remove_style_all(btn);
+    lv_obj_add_style(btn, style, 0);
+    lv_obj_add_style(btn, &style_pressed, LV_STATE_PRESSED);
+    lv_obj_set_size(btn, w, h);
+    lv_obj_align(btn, align, x_ofs, y_ofs);
+
+    lv_obj_t *lbl = lv_label_create(btn);
+    lv_label_set_text(lbl, text);
+    lv_obj_center(lbl);
+
+    return btn;
+}
+
+/* ── Button tap callback — show style info ───────────────────────── */
+static void style_tap_cb(lv_event_t *e)
+{
+    const char *name = (const char *)lv_event_get_user_data(e);
+    lv_label_set_text_fmt(s_lbl_info, "Tapped: %s", name);
+}
+
+/* ── Entry point ─────────────────────────────────────────────────── */
 void example_main(lv_obj_t *parent)
 {
     init_styles();
@@ -52,29 +87,28 @@ void example_main(lv_obj_t *parent)
 
     /* Primary buttons */
     for (int i = 0; i < 2; i++) {
-        lv_obj_t *btn = lv_btn_create(parent);
-        lv_obj_remove_style_all(btn);
-        lv_obj_add_style(btn, &style_primary, 0);
-        lv_obj_add_style(btn, &style_pressed, LV_STATE_PRESSED);
-        lv_obj_set_size(btn, 200, 55);
-        lv_obj_align(btn, LV_ALIGN_CENTER, -130, -30 + i * 70);
-
-        lv_obj_t *lbl = lv_label_create(btn);
-        lv_label_set_text_fmt(lbl, "Primary %d", i + 1);
-        lv_obj_center(lbl);
+        char text[16];
+        snprintf(text, sizeof(text), "Primary %d", i + 1);
+        lv_obj_t *btn = create_styled_button(parent, text,
+            &style_primary, 200, 55, LV_ALIGN_CENTER, -130, -30 + i * 70);
+        lv_obj_add_event_cb(btn, style_tap_cb, LV_EVENT_CLICKED,
+                            (void *)(i == 0 ? "Primary 1" : "Primary 2"));
     }
 
     /* Secondary buttons */
     for (int i = 0; i < 2; i++) {
-        lv_obj_t *btn = lv_btn_create(parent);
-        lv_obj_remove_style_all(btn);
-        lv_obj_add_style(btn, &style_secondary, 0);
-        lv_obj_add_style(btn, &style_pressed, LV_STATE_PRESSED);
-        lv_obj_set_size(btn, 200, 55);
-        lv_obj_align(btn, LV_ALIGN_CENTER, 130, -30 + i * 70);
-
-        lv_obj_t *lbl = lv_label_create(btn);
-        lv_label_set_text_fmt(lbl, "Secondary %d", i + 1);
-        lv_obj_center(lbl);
+        char text[16];
+        snprintf(text, sizeof(text), "Secondary %d", i + 1);
+        lv_obj_t *btn = create_styled_button(parent, text,
+            &style_secondary, 200, 55, LV_ALIGN_CENTER, 130, -30 + i * 70);
+        lv_obj_add_event_cb(btn, style_tap_cb, LV_EVENT_CLICKED,
+                            (void *)(i == 0 ? "Secondary 1" : "Secondary 2"));
     }
+
+    /* Info label */
+    s_lbl_info = lv_label_create(parent);
+    lv_label_set_text(s_lbl_info, "Tap a button to see its style");
+    lv_obj_set_style_text_font(s_lbl_info, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(s_lbl_info, lv_palette_main(LV_PALETTE_GREY), 0);
+    lv_obj_align(s_lbl_info, LV_ALIGN_BOTTOM_MID, 0, -10);
 }
