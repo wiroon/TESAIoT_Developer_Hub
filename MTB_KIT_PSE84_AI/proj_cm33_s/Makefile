@@ -15,6 +15,9 @@ include ../common.mk
 
 APPNAME=proj_cm33_s
 
+# Force Release build — prebuilt libraries require Release config
+CONFIG=Release
+
 VERBOSE=
 
 ################################################################################

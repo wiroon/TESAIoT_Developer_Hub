@@ -35,6 +35,9 @@ include ../common.mk
 # configurations for your IDE.
 APPNAME=proj_cm33_s
 
+# Force Release build — prebuilt libraries require Release config
+CONFIG=Release
+
 # If set to "true" or "1", display full command-lines when building.
 VERBOSE=
 

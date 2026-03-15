@@ -39,6 +39,9 @@ include ../common.mk
 # configurations for your IDE.
 APPNAME=proj_cm55
 
+# Force Release build — prebuilt libtesaiot_bento_cm55.a requires Release config
+CONFIG=Release
+
 # If set to "true" or "1", display full command-lines when building.
 VERBOSE=
 

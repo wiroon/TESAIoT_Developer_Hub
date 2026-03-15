@@ -25,6 +25,9 @@ include ../common.mk
 
 APPNAME=proj_cm55
 
+# Force Release build — prebuilt libtesaiot_bento_cm55.a requires Release config
+CONFIG=Release
+
 VERBOSE=
 
 ################################################################################
