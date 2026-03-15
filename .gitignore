@@ -1,0 +1,18 @@
+# MTB build artifacts
+build/
+build-micropython/
+*.elf
+*.map
+*.hex
+*.bin
+
+# macOS
+.DS_Store
+.Trashes
+
+# IDE
+.vscode/
+.settings/
+.project
+.cproject
+.metadata/
