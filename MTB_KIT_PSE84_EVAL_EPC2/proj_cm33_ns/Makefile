@@ -63,11 +63,9 @@ CY_IGNORE+=$(OPTIGA_LIB_PATH)/external/mbedtls
 CY_IGNORE+=$(OPTIGA_LIB_PATH)/extras
 CY_IGNORE+=$(OPTIGA_LIB_PATH)/examples
 CY_IGNORE+=$(OPTIGA_LIB_PATH)/tests
-# Exclude AI Kit application_code and libraries (CM55-specific, discovered via SEARCH)
-CY_IGNORE+=$(BENTO_LIBS_DIR)/kit-pse84-ai/application_code
-CY_IGNORE+=$(BENTO_LIBS_DIR)/kit-pse84-ai/libraries
-CY_IGNORE+=$(BENTO_LIBS_DIR)/kit-pse84-ai/modules
-CY_IGNORE+=$(BENTO_LIBS_DIR)/kit-pse84-ai/tesaiot
+# Exclude Eva Kit dirs that contain .c compiled via SEARCH/COMPONENT or libmicropython.a
+CY_IGNORE+=$(BENTO_LIBS_DIR)/kit-pse84-eval-epc2/modules
+CY_IGNORE+=$(BENTO_LIBS_DIR)/kit-pse84-eval-epc2/mpy/eva_controls_auto.c
 
 # MTB-compiled sources:
 #   main.c       - FreeRTOS entry point (creates MicroPython task, boots CM55)
@@ -94,7 +92,7 @@ SOURCES+=$(OPTIGA_LIB_PATH)/src/crypt/optiga_crypt.c \
 INCLUDES+=$(BENTO_COMMON)/mpy
 INCLUDES+=$(BENTO_LIBS_DIR)/kit-pse84-eval-epc2/mpy
 # OPTIGA lib config header (optiga_lib_config_mtb.h) — dir is CY_IGNOREd for .c but needed for .h
-INCLUDES+=$(BENTO_LIBS_DIR)/kit-pse84-ai/modules/tesaiot
+INCLUDES+=$(BENTO_LIBS_DIR)/kit-pse84-eval-epc2/modules/tesaiot
 
 # OPTIGA Trust M library includes (root needed for "include/optiga_*.h" relative paths)
 INCLUDES+=$(OPTIGA_LIB_PATH)
@@ -105,7 +103,7 @@ INCLUDES+=$(OPTIGA_LIB_PATH)/include \
           $(OPTIGA_LIB_PATH)/include/comms \
           $(OPTIGA_LIB_PATH)/include/ifx_i2c
 # SEARCH path for COMPONENT_OPTIGA_CYHAL PAL files (MTB auto-discovery)
-SEARCH+=$(BENTO_LIBS_DIR)/kit-pse84-ai
+SEARCH+=$(BENTO_LIBS_DIR)/kit-pse84-eval-epc2
 
 # Eval BSP generated sources include cy_graphics.h from the GFXSS package.
 # Mirror the secure-core include set here so CM33_NS can compile the same
