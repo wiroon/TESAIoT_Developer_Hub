@@ -1,0 +1,11 @@
+{
+  "title": "Sensor Auto-Poll",
+  "description": "FreeRTOS xTimerCreate for periodic sensor reads with status label and chart",
+  "difficulty": "intermediate",
+  "domain": "dashboards",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "freertos", "timer", "sensor", "bmi270", "auto-poll", "periodic"],
+  "apis_used": ["xTimerCreate", "xTimerStart", "lv_chart_set_next_value", "sensor_bmi270_read"],
+  "estimated_loc": 100,
+  "source_reference": "BiiL Part2 Ex15"
+}

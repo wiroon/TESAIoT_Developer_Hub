@@ -1,0 +1,11 @@
+{
+  "title": "Unified Game Input",
+  "description": "Input abstraction layer: F310 HID joystick + touch D-pad overlay to game_input_state_t",
+  "difficulty": "advanced",
+  "domain": "game",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["game", "input", "joystick", "touch", "hid", "dpad", "abstraction"],
+  "apis_used": ["game_input_init", "game_input_read", "ipc_send_cmd"],
+  "estimated_loc": 150,
+  "source_reference": "game_common.h + usb_hid_joystick + ipc_communication"
+}

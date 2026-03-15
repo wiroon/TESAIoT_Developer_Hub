@@ -1,0 +1,11 @@
+{
+  "title": "Theme Colors",
+  "description": "Display all UI_COLOR constants from tesaiot_ui_theme.h in a color grid with names",
+  "difficulty": "intermediate",
+  "domain": "ui-helpers",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "theme", "colors", "grid", "design-system", "palette"],
+  "apis_used": ["lv_obj_create", "lv_obj_set_style_bg_color", "lv_label_create"],
+  "estimated_loc": 85,
+  "source_reference": "BiiL Part5 Ex3"
+}

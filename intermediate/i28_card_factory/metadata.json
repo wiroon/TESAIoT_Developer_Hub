@@ -1,0 +1,11 @@
+{
+  "title": "Card Factory",
+  "description": "Reusable tesaiot_card_create function for rounded container with title and content area",
+  "difficulty": "intermediate",
+  "domain": "ui-helpers",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "card", "factory", "reusable", "container", "shadow", "rounded"],
+  "apis_used": ["lv_obj_create", "lv_obj_set_style_radius", "lv_obj_set_style_shadow_width"],
+  "estimated_loc": 80,
+  "source_reference": "BiiL Part5 Ex1"
+}

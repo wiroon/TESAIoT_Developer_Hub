@@ -1,0 +1,11 @@
+{
+  "title": "LED Sequence",
+  "description": "Knight Rider LED sequence R-G-B-G-R with timer state machine",
+  "difficulty": "beginner",
+  "domain": "gpio",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["gpio", "led", "sequence", "animation", "state_machine"],
+  "apis_used": ["cyhal_gpio_init", "cyhal_gpio_write", "lv_timer_create"],
+  "estimated_loc": 60,
+  "source_reference": "BiiL Part4 Ex8"
+}

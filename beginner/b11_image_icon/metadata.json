@@ -1,0 +1,11 @@
+{
+  "title": "Image Icon Display",
+  "description": "Display LVGL built-in symbol icons in a horizontal row",
+  "difficulty": "beginner",
+  "domain": "lvgl-widgets",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "image", "icon", "symbol"],
+  "apis_used": ["lv_label_create", "lv_label_set_text", "lv_obj_set_flex_flow"],
+  "estimated_loc": 40,
+  "source_reference": "BiiL Part1 Ex11"
+}

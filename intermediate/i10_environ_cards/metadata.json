@@ -1,0 +1,11 @@
+{
+  "title": "Environmental Cards",
+  "description": "Three arc-gauge cards for temperature, pressure, and humidity (AI Kit only)",
+  "difficulty": "intermediate",
+  "domain": "dashboards",
+  "boards": ["ai_kit"],
+  "tags": ["lvgl", "dashboard", "arc", "gauge", "dps368", "sht40", "temperature", "pressure", "humidity", "bsp-guard"],
+  "apis_used": ["lv_arc_create", "lv_arc_set_value", "lv_obj_create", "sensor_dps368_read", "sensor_sht40_read"],
+  "estimated_loc": 140,
+  "source_reference": "BiiL Part2 Ex10"
+}

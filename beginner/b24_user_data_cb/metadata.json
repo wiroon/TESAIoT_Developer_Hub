@@ -1,0 +1,11 @@
+{
+  "title": "User Data Callback",
+  "description": "Four buttons share one callback differentiated by user_data struct pointer",
+  "difficulty": "beginner",
+  "domain": "events",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "event", "user_data", "struct", "callback"],
+  "apis_used": ["lv_event_get_user_data", "lv_obj_add_event_cb"],
+  "estimated_loc": 50,
+  "source_reference": "BiiL Part3 Ex4"
+}

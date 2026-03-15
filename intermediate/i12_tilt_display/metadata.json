@@ -1,0 +1,11 @@
+{
+  "title": "Tilt Display",
+  "description": "BMI270 accelerometer roll and pitch angles shown as dual arc gauges",
+  "difficulty": "intermediate",
+  "domain": "dashboards",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "tilt", "roll", "pitch", "bmi270", "arc", "atan2"],
+  "apis_used": ["lv_arc_create", "lv_arc_set_value", "lv_arc_set_range", "sensor_bmi270_read"],
+  "estimated_loc": 105,
+  "source_reference": "BiiL Part2 Ex12"
+}

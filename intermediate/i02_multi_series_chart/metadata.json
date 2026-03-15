@@ -1,0 +1,11 @@
+{
+  "title": "Multi-Series Chart",
+  "description": "Three color-coded series plotting BMI270 accelerometer X, Y, Z axes",
+  "difficulty": "intermediate",
+  "domain": "charts",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "chart", "multi-series", "accelerometer", "bmi270", "color"],
+  "apis_used": ["lv_chart_create", "lv_chart_add_series", "lv_chart_set_next_value", "lv_chart_set_series_color"],
+  "estimated_loc": 85,
+  "source_reference": "BiiL Part2 Ex2"
+}

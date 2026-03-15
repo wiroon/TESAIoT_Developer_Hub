@@ -1,0 +1,11 @@
+{
+  "title": "Dual-Axis Chart",
+  "description": "Primary Y: temperature, Secondary Y: pressure from DPS368 barometric sensor",
+  "difficulty": "intermediate",
+  "domain": "charts",
+  "boards": ["ai_kit"],
+  "tags": ["lvgl", "chart", "dual-axis", "dps368", "temperature", "pressure", "bsp-guard"],
+  "apis_used": ["lv_chart_create", "lv_chart_add_series", "lv_chart_set_range", "sensor_dps368_read"],
+  "estimated_loc": 100,
+  "source_reference": "BiiL Part2 Ex6"
+}

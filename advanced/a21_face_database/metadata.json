@@ -1,0 +1,11 @@
+{
+  "title": "Face Database",
+  "description": "Face ID enrollment and recognition UI with gallery grid, match result display, and confidence score",
+  "difficulty": "advanced",
+  "domain": "ai",
+  "boards": ["ai_kit"],
+  "tags": ["face", "recognition", "enrollment", "ai", "gallery", "confidence", "biometric"],
+  "apis_used": ["face_detect_init", "face_detect_run", "face_enroll", "face_recognize", "lv_image_create"],
+  "estimated_loc": 160,
+  "source_reference": "face_detection.h"
+}

@@ -1,0 +1,11 @@
+{
+  "title": "Flex Column Layout",
+  "description": "Five labels in a vertical flex column with flex_grow",
+  "difficulty": "beginner",
+  "domain": "layout",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "flex", "column", "layout", "grow"],
+  "apis_used": ["lv_obj_set_flex_flow", "lv_obj_set_flex_grow", "lv_obj_set_style_pad_row"],
+  "estimated_loc": 40,
+  "source_reference": "BiiL Part2 Ex2"
+}

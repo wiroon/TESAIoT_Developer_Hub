@@ -1,0 +1,11 @@
+{
+  "title": "HSM PIN Entry Pad",
+  "description": "Custom PIN pad UI with 3x4 grid, masked display, SHA256 hash verification, 3-attempt lockout",
+  "difficulty": "advanced",
+  "domain": "security",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["pin", "security", "hsm", "sha256", "keypad", "lockout", "authentication"],
+  "apis_used": ["optiga_crypt_hash", "lv_btnmatrix_create", "lv_timer_create"],
+  "estimated_loc": 250,
+  "source_reference": "tesaiot_optiga_trust_m.h + LVGL btnmatrix"
+}

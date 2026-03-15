@@ -1,0 +1,11 @@
+{
+  "title": "Camera Frame Capture",
+  "description": "Camera frame capture with JPEG encoding and LVGL image widget preview via IPC frame share",
+  "difficulty": "advanced",
+  "domain": "camera",
+  "boards": ["ai_kit"],
+  "tags": ["camera", "jpeg", "image", "capture", "preview", "ipc", "frame"],
+  "apis_used": ["ipc_frame_request", "jpegenc_encode", "lv_image_create", "lv_image_set_src"],
+  "estimated_loc": 120,
+  "source_reference": "ipc_frame_share.h + jpegenc_wrapper.h"
+}

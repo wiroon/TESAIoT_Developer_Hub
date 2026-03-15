@@ -1,0 +1,11 @@
+{
+  "title": "Joystick Visualizer",
+  "description": "Custom dot-based joystick visualization with stick circles and button state table",
+  "difficulty": "advanced",
+  "domain": "usb",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["joystick", "visualizer", "gamepad", "analog", "stick", "buttons", "ui"],
+  "apis_used": ["game_input_read", "lv_obj_align_to", "lv_bar_set_value"],
+  "estimated_loc": 250,
+  "source_reference": "game_common.h"
+}

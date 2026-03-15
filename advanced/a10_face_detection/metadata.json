@@ -1,0 +1,11 @@
+{
+  "title": "Face Detection with ML",
+  "description": "SSD Nano face detection on camera frames with bounding box overlay on LVGL canvas",
+  "difficulty": "advanced",
+  "domain": "camera",
+  "boards": ["ai_kit"],
+  "tags": ["face", "detection", "ml", "inference", "ssd", "camera", "ai", "neural-network"],
+  "apis_used": ["face_detect", "camera_manager_get_frame", "lv_canvas_create", "lv_draw_rect"],
+  "estimated_loc": 350,
+  "source_reference": "face_id_engine.h + camera_manager"
+}

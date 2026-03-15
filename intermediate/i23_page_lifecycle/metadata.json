@@ -1,0 +1,11 @@
+{
+  "title": "Page Lifecycle",
+  "description": "Complete page_def_t with create, render, and destroy callbacks via pm_register",
+  "difficulty": "intermediate",
+  "domain": "page-manager",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["page-manager", "lifecycle", "create", "render", "destroy", "pm_register"],
+  "apis_used": ["pm_register", "page_def_t"],
+  "estimated_loc": 90,
+  "source_reference": "BiiL Part4 Ex1"
+}

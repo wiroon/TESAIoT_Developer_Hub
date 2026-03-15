@@ -1,0 +1,11 @@
+{
+  "title": "LED Brightness Control",
+  "description": "Virtual LED with slider brightness control and value label",
+  "difficulty": "beginner",
+  "domain": "lvgl-widgets",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "led", "slider", "brightness"],
+  "apis_used": ["lv_led_create", "lv_slider_create", "lv_led_set_brightness", "lv_slider_get_value"],
+  "estimated_loc": 40,
+  "source_reference": "BiiL Part1 Ex3"
+}

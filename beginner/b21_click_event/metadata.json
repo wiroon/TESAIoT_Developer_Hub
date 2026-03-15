@@ -1,0 +1,11 @@
+{
+  "title": "Click Event Details",
+  "description": "Detailed event callback showing get_code, get_target, and get_user_data",
+  "difficulty": "beginner",
+  "domain": "events",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "event", "click", "callback", "target"],
+  "apis_used": ["lv_event_get_code", "lv_event_get_target", "lv_event_get_user_data", "lv_obj_add_event_cb"],
+  "estimated_loc": 45,
+  "source_reference": "BiiL Part3 Ex1"
+}

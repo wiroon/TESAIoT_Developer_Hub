@@ -1,0 +1,11 @@
+{
+  "title": "Dropdown Select",
+  "description": "Dropdown menu with sensor names and label showing the selected item",
+  "difficulty": "beginner",
+  "domain": "lvgl-widgets",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "dropdown", "select", "list"],
+  "apis_used": ["lv_dropdown_create", "lv_dropdown_set_options", "lv_dropdown_get_selected_str"],
+  "estimated_loc": 35,
+  "source_reference": "BiiL Part1 Ex9"
+}
