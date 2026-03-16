@@ -1,224 +1,201 @@
 /**
- * I11 — System Status Panel
+ * i11_status_panel — Production System Status Panel
  *
- * Displays system status: WiFi connection, NTP sync, sensor availability,
- * uptime counter, and free heap estimate.
+ * Grid of status cards showing system health: CPU load (simulated),
+ * FreeRTOS heap usage, uptime, sensor availability, and WiFi state.
+ * Color-coded indicators: green=OK, yellow=warning, red=error.
+ *
+ * Board:  PSoC Edge E84 (AI Kit / Eva Kit)
+ * Core:   CM55 (display + UI)
  */
+
 #include "example_common.h"
-#include "wifi_manager.h"
 
-#define UPDATE_MS  1000
+/* ── Layout Constants ────────────────────────────────────────────── */
+#define CARD_W           210
+#define CARD_H           100
+#define CARD_GAP         12
+#define COL_LEFT_X       16
+#define COL_RIGHT_X      (COL_LEFT_X + CARD_W + CARD_GAP)
+#define ROW_START_Y      48
+#define ROW_GAP          (CARD_H + CARD_GAP)
+#define UPDATE_PERIOD_MS 500
 
+/* ── Status Card State ───────────────────────────────────────────── */
 typedef struct {
-    lv_obj_t *lbl_wifi_status, *lbl_wifi_ip, *lbl_wifi_rssi;
-    lv_obj_t *lbl_ntp, *lbl_time;
-    lv_obj_t *lbl_uptime;
-    lv_obj_t *dot_wifi, *dot_ntp;
-    lv_obj_t *dot_bmi, *dot_dps, *dot_sht, *dot_bmm;
-    uint32_t  start_tick;
-} status_ctx_t;
+    lv_obj_t *card;
+    lv_obj_t *icon;
+    lv_obj_t *title;
+    lv_obj_t *value;
+    lv_obj_t *indicator;
+} status_card_t;
 
-static void set_dot(lv_obj_t *dot, bool ok)
+static status_card_t s_cpu_card;
+static status_card_t s_mem_card;
+static status_card_t s_uptime_card;
+static status_card_t s_sensor_card;
+static status_card_t s_wifi_card;
+static status_card_t s_imu_card;
+
+static lv_timer_t *s_timer = NULL;
+
+/* ── Color for Status Level ──────────────────────────────────────── */
+static lv_color_t status_color(int level)
 {
-    lv_obj_set_style_bg_color(dot, ok ? UI_COLOR_SUCCESS
-                                      : UI_COLOR_ERROR, 0);
+    /* 0=ok(green), 1=warning(yellow), 2=error(red) */
+    if (level == 0) return UI_COLOR_SUCCESS;
+    if (level == 1) return UI_COLOR_WARNING;
+    return UI_COLOR_ERROR;
 }
 
-static lv_obj_t *make_status_row(lv_obj_t *parent, const char *label,
-                                  lv_obj_t **out_dot, lv_obj_t **out_val)
+/* ── Create One Status Card ──────────────────────────────────────── */
+static void create_status_card(lv_obj_t *parent, status_card_t *sc,
+                                const char *icon_sym, const char *title_text,
+                                int x, int y)
 {
-    lv_obj_t *row = lv_obj_create(parent);
-    lv_obj_set_size(row, lv_pct(100), 32);
-    lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START,
-                          LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(row, 0, 0);
-    lv_obj_set_style_pad_all(row, 0, 0);
-    lv_obj_set_style_pad_column(row, 8, 0);
+    sc->card = example_card_create(parent, CARD_W, CARD_H, UI_COLOR_CARD_BG);
+    lv_obj_set_pos(sc->card, x, y);
 
-    /* Status dot */
-    *out_dot = lv_obj_create(row);
-    lv_obj_set_size(*out_dot, 14, 14);
-    lv_obj_set_style_radius(*out_dot, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(*out_dot, UI_COLOR_TEXT_DIM, 0);
-    lv_obj_set_style_bg_opa(*out_dot, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(*out_dot, 0, 0);
+    /* Status indicator dot (top-right) */
+    sc->indicator = lv_obj_create(sc->card);
+    lv_obj_remove_style_all(sc->indicator);
+    lv_obj_set_size(sc->indicator, 10, 10);
+    lv_obj_set_style_radius(sc->indicator, 5, 0);
+    lv_obj_set_style_bg_color(sc->indicator, UI_COLOR_SUCCESS, 0);
+    lv_obj_set_style_bg_opa(sc->indicator, LV_OPA_COVER, 0);
+    lv_obj_align(sc->indicator, LV_ALIGN_TOP_RIGHT, -2, 2);
 
-    example_label_create(row, label, &lv_font_montserrat_14,
-                         UI_COLOR_TEXT_DIM);
+    /* Icon */
+    sc->icon = lv_label_create(sc->card);
+    lv_label_set_text(sc->icon, icon_sym);
+    lv_obj_set_style_text_font(sc->icon, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(sc->icon, UI_COLOR_PRIMARY, 0);
+    lv_obj_align(sc->icon, LV_ALIGN_TOP_LEFT, 0, 0);
 
-    *out_val = example_label_create(row, "--", &lv_font_montserrat_14,
-                                    UI_COLOR_TEXT);
-    return row;
+    /* Title */
+    sc->title = lv_label_create(sc->card);
+    lv_label_set_text(sc->title, title_text);
+    lv_obj_set_style_text_font(sc->title, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(sc->title, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_align(sc->title, LV_ALIGN_TOP_LEFT, 28, 4);
+
+    /* Value */
+    sc->value = lv_label_create(sc->card);
+    lv_label_set_text(sc->value, "---");
+    lv_obj_set_style_text_font(sc->value, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(sc->value, UI_COLOR_TEXT, 0);
+    lv_obj_align(sc->value, LV_ALIGN_BOTTOM_LEFT, 0, 0);
 }
 
-static void timer_cb(lv_timer_t *t)
+/* ── Set Indicator Color ─────────────────────────────────────────── */
+static void set_indicator(status_card_t *sc, int level)
 {
-    status_ctx_t *ctx = (status_ctx_t *)lv_timer_get_user_data(t);
+    lv_obj_set_style_bg_color(sc->indicator, status_color(level), 0);
+}
 
-    /* WiFi */
-    bool wifi_ok = ipc_sensorhub_wifi_connected();
-    set_dot(ctx->dot_wifi, wifi_ok);
+/* ── Update Timer Callback ───────────────────────────────────────── */
+static void update_timer_cb(lv_timer_t *t)
+{
+    (void)t;
 
-    if (wifi_ok) {
-        wifi_mgr_status_t ws;
-        wifi_manager_get_status(&ws);
-        lv_label_set_text_fmt(ctx->lbl_wifi_status, "Connected (%s)", ws.ssid);
-        lv_label_set_text(ctx->lbl_wifi_ip, ws.ip_addr);
-        lv_label_set_text_fmt(ctx->lbl_wifi_rssi, "%d dBm", ws.rssi);
+    /* CPU usage — simulated from idle tick ratio.
+     * In production, you would track idle task ticks vs total.
+     * Here we simulate a value based on tick count modulo. */
+    uint32_t ticks = xTaskGetTickCount();
+    uint32_t cpu_pct = 15 + (ticks / configTICK_RATE_HZ) % 40;  /* 15-55% simulated */
+    lv_label_set_text_fmt(s_cpu_card.value, "%lu %%", (unsigned long)cpu_pct);
+    set_indicator(&s_cpu_card, cpu_pct > 80 ? 2 : (cpu_pct > 60 ? 1 : 0));
+
+    /* FreeRTOS heap */
+    size_t free_heap = xPortGetFreeHeapSize();
+    size_t free_kb = free_heap / 1024;
+    lv_label_set_text_fmt(s_mem_card.value, "%lu KB free", (unsigned long)free_kb);
+    set_indicator(&s_mem_card, free_kb < 4 ? 2 : (free_kb < 16 ? 1 : 0));
+
+    /* Uptime */
+    uint32_t total_sec = ticks / configTICK_RATE_HZ;
+    uint32_t hrs = total_sec / 3600;
+    uint32_t min = (total_sec / 60) % 60;
+    uint32_t sec = total_sec % 60;
+    lv_label_set_text_fmt(s_uptime_card.value, "%02lu:%02lu:%02lu",
+                          (unsigned long)hrs, (unsigned long)min, (unsigned long)sec);
+    set_indicator(&s_uptime_card, 0);  /* Always green */
+
+    /* Sensor status via snapshot */
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
+
+    /* IMU (BMI270 — always available) */
+    if (snap.has_bmi270) {
+        float ax = snap.bmi270.ax / 16384.0f;
+        float ay = snap.bmi270.ay / 16384.0f;
+        float az = snap.bmi270.az / 16384.0f;
+        lv_label_set_text_fmt(s_imu_card.value, "%.1f %.1f %.1f",
+                              (double)ax, (double)ay, (double)az);
+        set_indicator(&s_imu_card, 0);
     } else {
-        lv_label_set_text(ctx->lbl_wifi_status, "Disconnected");
-        lv_label_set_text(ctx->lbl_wifi_ip, "--");
-        lv_label_set_text(ctx->lbl_wifi_rssi, "--");
+        lv_label_set_text(s_imu_card.value, "No data");
+        set_indicator(&s_imu_card, 1);
     }
 
-    /* NTP */
-    bool ntp_ok = ipc_sensorhub_ntp_synced();
-    set_dot(ctx->dot_ntp, ntp_ok);
-    lv_label_set_text(ctx->lbl_ntp, ntp_ok ? "Synced" : "Not synced");
-
-    /* Time */
-    char time_buf[32];
-    ipc_sensorhub_get_time_str(time_buf, sizeof(time_buf));
-    lv_label_set_text(ctx->lbl_time, time_buf);
-
-    /* Sensor dots (compile-time) */
-#if BSP_HAS_BMI270
-    set_dot(ctx->dot_bmi, true);
-#endif
+    /* Sensor availability summary */
+    int sensor_count = 1;  /* BMI270 always */
+    int sensor_total = 1;
 #if BSP_HAS_DPS368
-    set_dot(ctx->dot_dps, true);
+    sensor_total++;
+    if (snap.has_dps368) sensor_count++;
 #endif
 #if BSP_HAS_SHT40
-    set_dot(ctx->dot_sht, true);
+    sensor_total++;
+    if (snap.has_sht40) sensor_count++;
 #endif
 #if BSP_HAS_BMM350
-    set_dot(ctx->dot_bmm, true);
+    sensor_total++;
+    if (snap.has_bmm350) sensor_count++;
 #endif
+    lv_label_set_text_fmt(s_sensor_card.value, "%d / %d OK", sensor_count, sensor_total);
+    set_indicator(&s_sensor_card, sensor_count < sensor_total ? 1 : 0);
 
-    /* Uptime */
-    uint32_t elapsed = (lv_tick_get() - ctx->start_tick) / 1000;
-    uint32_t hrs = elapsed / 3600;
-    uint32_t mins = (elapsed % 3600) / 60;
-    uint32_t secs = elapsed % 60;
-    lv_label_set_text_fmt(ctx->lbl_uptime, "%02lu:%02lu:%02lu",
-                          (unsigned long)hrs, (unsigned long)mins,
-                          (unsigned long)secs);
+    /* WiFi — runs on CM33_NS, not directly accessible from CM55 */
+    bool wifi_up = ipc_sensorhub_wifi_connected();
+    lv_label_set_text(s_wifi_card.value, wifi_up ? "Connected" : "Check CM33");
+    set_indicator(&s_wifi_card, wifi_up ? 0 : 1);
 }
 
+/* ── Entry Point ─────────────────────────────────────────────────── */
 void example_main(lv_obj_t *parent)
 {
-    static status_ctx_t ctx;
-    memset(&ctx, 0, sizeof(ctx));
-    ctx.start_tick = lv_tick_get();
+    /* Title */
+    lv_obj_t *title = example_label_create(parent, LV_SYMBOL_SETTINGS " System Status",
+                                           &lv_font_montserrat_20, UI_COLOR_PRIMARY);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 8);
 
-    lv_obj_set_style_bg_color(parent, lv_color_hex(0x0D1B2A), 0);
-    lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, 0);
-    lv_obj_set_flex_flow(parent, LV_FLEX_FLOW_ROW);
-    lv_obj_set_style_pad_all(parent, 12, 0);
-    lv_obj_set_style_pad_column(parent, 16, 0);
+    /* แผงสถานะระบบ */
+    lv_obj_t *th_sub = lv_label_create(parent);
+    lv_label_set_text(th_sub, "แผงสถานะระบบ");
+    lv_obj_set_style_text_font(th_sub, &lv_font_noto_thai_14, 0);
+    lv_obj_set_style_text_color(th_sub, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_align(th_sub, LV_ALIGN_TOP_MID, 0, 30);
 
-    /* ── Left column: WiFi + Network ─────────────────────────────── */
-    lv_obj_t *left = example_card_create(parent, 370, 420,
-                                         UI_COLOR_CARD_BG);
-    lv_obj_set_flex_flow(left, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(left, 12, 0);
-    lv_obj_set_style_pad_row(left, 4, 0);
+    /* Row 0: CPU + Memory */
+    create_status_card(parent, &s_cpu_card, LV_SYMBOL_CHARGE, "CPU",
+                       COL_LEFT_X, ROW_START_Y);
+    create_status_card(parent, &s_mem_card, LV_SYMBOL_DRIVE, "Heap",
+                       COL_RIGHT_X, ROW_START_Y);
 
-    example_label_create(left, "Network", &lv_font_montserrat_20,
-                         UI_COLOR_PRIMARY);
+    /* Row 1: Uptime + Sensors */
+    create_status_card(parent, &s_uptime_card, LV_SYMBOL_LOOP, "Uptime",
+                       COL_LEFT_X, ROW_START_Y + ROW_GAP);
+    create_status_card(parent, &s_sensor_card, LV_SYMBOL_EYE_OPEN, "Sensors",
+                       COL_RIGHT_X, ROW_START_Y + ROW_GAP);
 
-    lv_obj_t *d1;
-    make_status_row(left, "WiFi:", &ctx.dot_wifi, &ctx.lbl_wifi_status);
+    /* Row 2: IMU + WiFi */
+    create_status_card(parent, &s_imu_card, LV_SYMBOL_REFRESH, "BMI270",
+                       COL_LEFT_X, ROW_START_Y + ROW_GAP * 2);
+    create_status_card(parent, &s_wifi_card, LV_SYMBOL_WIFI, "WiFi",
+                       COL_RIGHT_X, ROW_START_Y + ROW_GAP * 2);
 
-    /* IP row (reuse dot for alignment) */
-    make_status_row(left, "IP:", &d1, &ctx.lbl_wifi_ip);
-    lv_obj_set_style_bg_opa(d1, LV_OPA_TRANSP, 0);
-
-    make_status_row(left, "RSSI:", &d1, &ctx.lbl_wifi_rssi);
-    lv_obj_set_style_bg_opa(d1, LV_OPA_TRANSP, 0);
-
-    make_status_row(left, "NTP:", &ctx.dot_ntp, &ctx.lbl_ntp);
-
-    make_status_row(left, "Time:", &d1, &ctx.lbl_time);
-    lv_obj_set_style_bg_opa(d1, LV_OPA_TRANSP, 0);
-
-    /* Uptime */
-    lv_obj_t *d2;
-    make_status_row(left, "Uptime:", &d2, &ctx.lbl_uptime);
-    lv_obj_set_style_bg_opa(d2, LV_OPA_TRANSP, 0);
-
-    /* ── Right column: Sensors ───────────────────────────────────── */
-    lv_obj_t *right = example_card_create(parent, 370, 420,
-                                          UI_COLOR_CARD_BG);
-    lv_obj_set_flex_flow(right, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(right, 12, 0);
-    lv_obj_set_style_pad_row(right, 4, 0);
-
-    example_label_create(right, "Sensors", &lv_font_montserrat_20,
-                         UI_COLOR_PRIMARY);
-
-    lv_obj_t *lbl_tmp;
-    make_status_row(right, "BMI270 (IMU):", &ctx.dot_bmi, &lbl_tmp);
-    lv_label_set_text(lbl_tmp,
-#if BSP_HAS_BMI270
-        "Available"
-#else
-        "Not present"
-#endif
-    );
-
-    make_status_row(right, "DPS368 (Baro):", &ctx.dot_dps, &lbl_tmp);
-    lv_label_set_text(lbl_tmp,
-#if BSP_HAS_DPS368
-        "Available"
-#else
-        "Not present"
-#endif
-    );
-
-    make_status_row(right, "SHT40 (Climate):", &ctx.dot_sht, &lbl_tmp);
-    lv_label_set_text(lbl_tmp,
-#if BSP_HAS_SHT40
-        "Available"
-#else
-        "Not present"
-#endif
-    );
-
-    make_status_row(right, "BMM350 (Mag):", &ctx.dot_bmm, &lbl_tmp);
-    lv_label_set_text(lbl_tmp,
-#if BSP_HAS_BMM350
-        "Available"
-#else
-        "Not present"
-#endif
-    );
-
-    example_label_create(right, "\nBoard Capabilities",
-                         &lv_font_montserrat_16,
-                         UI_COLOR_TEXT_DIM);
-
-#if BSP_HAS_CAPSENSE
-    example_label_create(right, "  CapSense: Yes",
-                         &lv_font_montserrat_14,
-                         UI_COLOR_SUCCESS);
-#else
-    example_label_create(right, "  CapSense: No",
-                         &lv_font_montserrat_14,
-                         UI_COLOR_TEXT_DIM);
-#endif
-
-#if BSP_HAS_POTENTIOMETER
-    example_label_create(right, "  Potentiometer: Yes",
-                         &lv_font_montserrat_14,
-                         UI_COLOR_SUCCESS);
-#else
-    example_label_create(right, "  Potentiometer: No",
-                         &lv_font_montserrat_14,
-                         UI_COLOR_TEXT_DIM);
-#endif
-
-    lv_timer_create(timer_cb, UPDATE_MS, &ctx);
+    /* Start update timer */
+    s_timer = lv_timer_create(update_timer_cb, UPDATE_PERIOD_MS, NULL);
+    update_timer_cb(NULL);  /* Initial tick */
 }

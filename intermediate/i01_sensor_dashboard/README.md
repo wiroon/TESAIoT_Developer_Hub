@@ -1,17 +1,25 @@
-# I01 — Sensor Dashboard
+# I01 — Sensor Dashboard (Production-Derived)
+Multi-sensor dashboard with autoscale charts and change-gated rendering.
+Adapted from production `page_dashboard.c` (90%+ fidelity).
 
-Full 4-card sensor dashboard displaying live IMU acceleration/gyroscope, barometric pressure/temperature, climate temperature/humidity, and compass heading. All values update at 10 Hz via IPC snapshot.
+## Key Patterns
+- **Autoscale chart**: Scans all data points, computes min/max, adds 10% padding
+- **Change-gated rendering**: Only updates widgets when sensor data actually changed
+- **BSP conditional compilation**: Compiles on AI Kit (all sensors) and Eva Kit (subset)
+- **Module-static context**: All widget pointers in a single struct for clean lifecycle
 
-## What it demonstrates
-- Multi-card dashboard layout with flex-flow wrapping
-- IPC sensor snapshot for real-time data acquisition
-- Board-specific sensor guards (`#if BSP_HAS_xxx`)
-- Periodic LVGL timer for continuous UI updates
-- Color-coded cards matching native theme colors
+## Board Compatibility
+- AI Kit: Full dashboard (BMI270 + DPS368 + SHT40 + Charts)
+- Eva Kit: Partial (BMI270 + CapSense + Charts, no DPS368/SHT40)
 
-## Hardware
-- Board: KIT_PSE84_AI (all 4 cards), KIT_PSE84_EVAL_EPC2 (IMU + Compass only)
-- Sensors: BMI270, DPS368, SHT40, BMM350
+## Concepts
+- `ipc_sensorhub_snapshot()` for sensor data access
+- `lv_chart_set_next_value()` + `lv_chart_get_y_array()` for chart data
+- `#if BSP_HAS_xxx` compile-time guards
+- Altitude from barometric pressure (hypsometric formula)
+- Dew point via Magnus-Tetens approximation
+- Heat index via Rothfusz regression
+- Comfort level classification
 
 ## How to use
 1. Copy `main_example.c` to `proj_cm55/app/`

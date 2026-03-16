@@ -105,6 +105,11 @@ void example_main(lv_obj_t *parent)
     example_label_create(parent, "Gauge Cluster",
                          &lv_font_montserrat_24,
                          UI_COLOR_PRIMARY);
+    /* กลุ่มมาตรวัด */
+    example_label_create(parent,
+        "กลุ่มมาตรวัด",
+        &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+
 
     /* Gauges row */
     lv_obj_t *row = lv_obj_create(parent);

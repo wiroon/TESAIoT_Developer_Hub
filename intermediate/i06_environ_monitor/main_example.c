@@ -142,6 +142,11 @@ void example_main(lv_obj_t *parent)
     example_label_create(parent, "Environmental Monitor",
                          &lv_font_montserrat_24,
                          UI_COLOR_PRIMARY);
+    /* ตรวจวัดสิ่งแวดล้อม */
+    example_label_create(parent,
+        "ตรวจวัดสิ่งแวดล้อม",
+        &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+
 
     /* Cards row */
     lv_obj_t *row = lv_obj_create(parent);

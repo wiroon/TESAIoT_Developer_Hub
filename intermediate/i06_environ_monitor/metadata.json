@@ -3,9 +3,23 @@
   "description": "Temperature, humidity, and pressure monitor with trend indicators and comfort zone assessment",
   "difficulty": "intermediate",
   "domain": "Sensors",
-  "tags": ["dps368", "sht40", "dashboard", "sensor"],
-  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
-  "files": ["main_example.c"],
+  "tags": [
+    "dps368",
+    "sht40",
+    "dashboard",
+    "sensor"
+  ],
+  "boards": [
+    "KIT_PSE84_AI",
+    "KIT_PSE84_EVAL_EPC2"
+  ],
+  "files": [
+    "main_example.c"
+  ],
   "requires_sensors": true,
-  "sensors_used": ["DPS368", "SHT40"]
+  "sensors_used": [
+    "DPS368",
+    "SHT40"
+  ],
+  "id": "i06_environ_monitor"
 }

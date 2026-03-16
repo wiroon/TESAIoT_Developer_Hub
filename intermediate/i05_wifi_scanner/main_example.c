@@ -184,6 +184,11 @@ void example_main(lv_obj_t *parent)
     ctx.lbl_status = example_label_create(parent, "Tap Scan to start",
                                           &lv_font_montserrat_14,
                                           UI_COLOR_TEXT_DIM);
+    /* สแกนเครือข่าย WiFi */
+    example_label_create(parent,
+        "สแกนเครือข่าย WiFi",
+        &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+
 
     /* Scrollable list */
     ctx.list = lv_obj_create(parent);

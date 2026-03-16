@@ -86,6 +86,11 @@ void example_main(lv_obj_t *parent)
     example_label_create(parent, "CapSense Visualization",
                          &lv_font_montserrat_24,
                          UI_COLOR_PRIMARY);
+    /* แสดงผล CapSense */
+    example_label_create(parent,
+        "แสดงผล CapSense",
+        &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+
 
     /* Buttons section */
     lv_obj_t *btn_row = lv_obj_create(parent);

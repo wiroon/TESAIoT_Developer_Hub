@@ -141,6 +141,10 @@ void example_main(lv_obj_t *parent)
     example_label_create(hdr, "Sensor Console", &lv_font_montserrat_20,
                          UI_COLOR_SUCCESS);
 
+    /* บันทึกเลื่อนอัตโนมัติ */
+    example_label_create(hdr, "บันทึกเลื่อนอัตโนมัติ",
+                         &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+
     ctx.lbl_line_count = example_label_create(hdr, "Lines: 0",
                                               &lv_font_montserrat_14,
                                               UI_COLOR_TEXT_DIM);

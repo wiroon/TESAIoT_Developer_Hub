@@ -152,6 +152,10 @@ void example_main(lv_obj_t *parent)
                          &lv_font_montserrat_24,
                          UI_COLOR_PRIMARY);
 
+    /* ระดับน้ำฟองอากาศ */
+    example_label_create(info, "ระดับน้ำฟองอากาศ",
+                         &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+
     ctx.lbl_level = example_label_create(info, "Initializing...",
                                          &lv_font_montserrat_28,
                                          UI_COLOR_TEXT);

@@ -110,6 +110,11 @@ void example_main(lv_obj_t *parent)
     example_label_create(parent, "Motion Detector",
                          &lv_font_montserrat_24,
                          UI_COLOR_PRIMARY);
+    /* ตรวจจับการเคลื่อนไหว */
+    example_label_create(parent,
+        "ตรวจจับการเคลื่อนไหว",
+        &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+
 
     /* Status row */
     lv_obj_t *srow = lv_obj_create(parent);

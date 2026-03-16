@@ -78,6 +78,11 @@ void example_main(lv_obj_t *parent)
     example_label_create(parent, "Potentiometer Control",
                          &lv_font_montserrat_24,
                          UI_COLOR_PRIMARY);
+    /* ควบคุมด้วยโพเทนชิโอมิเตอร์ */
+    example_label_create(parent,
+        "ควบคุมด้วยโพเทนชิโอมิเตอร์",
+        &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+
 
     /* Main content row */
     lv_obj_t *row = lv_obj_create(parent);

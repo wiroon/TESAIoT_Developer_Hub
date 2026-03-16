@@ -96,6 +96,11 @@ void example_main(lv_obj_t *parent)
     example_label_create(parent, "Multi-Sensor Bar Chart",
                          &lv_font_montserrat_24,
                          UI_COLOR_PRIMARY);
+    /* กราฟแท่งหลายชุดข้อมูล */
+    example_label_create(parent,
+        "กราฟแท่งหลายชุดข้อมูล",
+        &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+
 
     /* Count available bars */
     int nbars = 0;

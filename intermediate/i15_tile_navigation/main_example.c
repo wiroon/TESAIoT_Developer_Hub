@@ -164,7 +164,7 @@ static void make_page_about(lv_obj_t *tile)
 
     example_label_create(tile, "Tile Navigation", &lv_font_montserrat_24,
                          UI_COLOR_INFO);
-    example_label_create(tile, "BENTO : : Make Anything.",
+    example_label_create(tile, "TESAIoT : : Make Anything.",
                          &lv_font_montserrat_20,
                          UI_COLOR_PRIMARY);
     example_label_create(tile, "PSoC Edge E84 Developer Hub",
@@ -189,6 +189,11 @@ void example_main(lv_obj_t *parent)
     ctx.lbl_page = example_label_create(parent, "Page 1/4: Sensors",
                                         &lv_font_montserrat_14,
                                         UI_COLOR_TEXT_DIM);
+    /* นำทางแบบไทล์ */
+    example_label_create(parent,
+        "นำทางแบบไทล์",
+        &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+
     lv_obj_set_width(ctx.lbl_page, lv_pct(100));
     lv_obj_set_style_text_align(ctx.lbl_page, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_pad_ver(ctx.lbl_page, 4, 0);

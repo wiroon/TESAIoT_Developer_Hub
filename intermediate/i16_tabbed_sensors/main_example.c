@@ -117,6 +117,13 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_bg_color(parent, lv_color_hex(0x0D1B2A), 0);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, 0);
 
+    /* เซ็นเซอร์แบบแท็บ */
+    lv_obj_t *th_sub = lv_label_create(parent);
+    lv_label_set_text(th_sub, "เซ็นเซอร์แบบแท็บ");
+    lv_obj_set_style_text_font(th_sub, &lv_font_noto_thai_14, 0);
+    lv_obj_set_style_text_color(th_sub, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_align(th_sub, LV_ALIGN_TOP_MID, 0, 4);
+
     /* Tabview */
     lv_obj_t *tv = lv_tabview_create(parent);
     lv_tabview_set_tab_bar_size(tv, 44);

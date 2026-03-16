@@ -149,6 +149,10 @@ void example_main(lv_obj_t *parent)
                          &lv_font_montserrat_24,
                          UI_COLOR_PRIMARY);
 
+    /* บันทึกข้อมูล */
+    example_label_create(hdr, "บันทึกข้อมูล",
+                         &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+
     ctx.lbl_count = example_label_create(hdr, "Entries: 0",
                                          &lv_font_montserrat_14,
                                          UI_COLOR_TEXT_DIM);

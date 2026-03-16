@@ -1,18 +1,24 @@
-# I11 — System Status Panel
+# i11 — System Status Panel
 
-Two-column system status panel. Left side shows WiFi connection details (SSID, IP, RSSI), NTP sync state, current time, and uptime. Right side shows sensor availability with green/red dots and board capability flags.
+Production-quality system status dashboard displayed as a 2-column grid of
+color-coded cards. Each card shows a system metric with a status indicator
+dot (green=OK, yellow=warning, red=error).
 
-## What it demonstrates
-- WiFi Manager status API for connection details
-- NTP sync check and time string retrieval
-- Compile-time sensor/feature detection with visual indicators
-- Uptime counter using `lv_tick_get()`
-- Two-column card layout
+## Status Cards
 
-## Hardware
-- Board: KIT_PSE84_AI, KIT_PSE84_EVAL_EPC2
-- Sensors: None required (displays availability of all)
+| Card    | Data Source                        | Warning Threshold    | Error Threshold |
+|---------|------------------------------------|----------------------|-----------------|
+| CPU     | Simulated from tick count          | > 60%                | > 80%          |
+| Heap    | `xPortGetFreeHeapSize()`           | < 16 KB free         | < 4 KB free    |
+| Uptime  | `xTaskGetTickCount()`              | Always green         | —              |
+| Sensors | BSP-guarded sensor count           | Some unavailable     | —              |
+| BMI270  | `ipc_sensorhub_snapshot()` IMU     | No data yet          | —              |
+| WiFi    | `ipc_sensorhub_wifi_connected()`   | Not connected        | —              |
 
-## How to use
-1. Copy `main_example.c` to `proj_cm55/app/`
-2. Build: `make build -j && make program`
+## Key Techniques
+
+- `example_card_create()` helper for consistent card styling
+- `xPortGetFreeHeapSize()` for real FreeRTOS heap monitoring
+- BSP feature guards to count available sensors per board
+- WiFi state via IPC (WiFi runs on CM33_NS, not CM55)
+- 500ms update interval for smooth monitoring
