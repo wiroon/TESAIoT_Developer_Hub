@@ -1,0 +1,11 @@
+{
+  "title": "WiFi Credentials Storage",
+  "description": "Store, load, and delete WiFi credentials in QSPI LittleFS with CRC32 integrity",
+  "difficulty": "advanced",
+  "domain": "wifi",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["wifi", "credentials", "qspi", "littlefs", "nvm", "crc32", "storage"],
+  "apis_used": ["qspi_wifi_creds_save", "qspi_wifi_creds_load", "qspi_wifi_creds_delete", "lv_list_create"],
+  "estimated_loc": 180,
+  "source_reference": "qspi_wifi_creds.h + LittleFS"
+}

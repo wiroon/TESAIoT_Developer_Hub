@@ -1,0 +1,11 @@
+{
+  "title": "Flex Row Layout",
+  "description": "Four buttons arranged in a horizontal flex row with gap spacing",
+  "difficulty": "beginner",
+  "domain": "layout",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "flex", "row", "layout", "button"],
+  "apis_used": ["lv_obj_set_flex_flow", "lv_obj_set_flex_align", "lv_obj_set_style_pad_column"],
+  "estimated_loc": 35,
+  "source_reference": "BiiL Part2 Ex1"
+}

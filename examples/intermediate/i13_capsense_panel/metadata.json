@@ -1,0 +1,11 @@
+{
+  "title": "CapSense Panel",
+  "description": "CapSense buttons and slider displayed as LED indicators and bar widget (Eva Kit only)",
+  "difficulty": "intermediate",
+  "domain": "dashboards",
+  "boards": ["eva_kit"],
+  "tags": ["lvgl", "capsense", "buttons", "slider", "bar", "led", "bsp-guard", "eva-kit"],
+  "apis_used": ["lv_bar_create", "lv_bar_set_value", "lv_led_create", "lv_led_on", "sensor_capsense_read"],
+  "estimated_loc": 100,
+  "source_reference": "BiiL Part2 Ex13"
+}

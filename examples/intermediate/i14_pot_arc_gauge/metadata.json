@@ -1,0 +1,11 @@
+{
+  "title": "Potentiometer Arc Gauge",
+  "description": "Potentiometer reading mapped to an arc gauge 0-100% with color gradient (Eva Kit only)",
+  "difficulty": "intermediate",
+  "domain": "dashboards",
+  "boards": ["eva_kit"],
+  "tags": ["lvgl", "potentiometer", "arc", "gauge", "color-gradient", "bsp-guard", "eva-kit"],
+  "apis_used": ["lv_arc_create", "lv_arc_set_value", "sensor_potentiometer_read"],
+  "estimated_loc": 80,
+  "source_reference": "BiiL Part2 Ex14"
+}

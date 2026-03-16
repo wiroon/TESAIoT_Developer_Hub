@@ -1,0 +1,11 @@
+{
+  "title": "Smart Watch Face",
+  "description": "Analog-style watch face with time display, seconds arc, and sensor summary cards updated every second",
+  "difficulty": "advanced",
+  "domain": "ui-integration",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["watch", "clock", "time", "arc", "timer", "sensor", "dashboard"],
+  "apis_used": ["lv_arc_create", "lv_timer_create", "lv_label_set_text_fmt", "xTaskGetTickCount"],
+  "estimated_loc": 150,
+  "source_reference": "FreeRTOS tick-based time"
+}

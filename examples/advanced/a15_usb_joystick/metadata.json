@@ -1,0 +1,11 @@
+{
+  "title": "Virtual Joystick Visualizer",
+  "description": "Touch-based virtual joystick with dual analog sticks and button indicators using LVGL events",
+  "difficulty": "advanced",
+  "domain": "ui",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["joystick", "virtual", "touch", "analog", "stick", "buttons", "ui"],
+  "apis_used": ["lv_indev_get_point", "lv_timer_create", "lv_obj_align"],
+  "estimated_loc": 220,
+  "source_reference": "example_common.h + LVGL events"
+}

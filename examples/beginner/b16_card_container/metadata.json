@@ -1,0 +1,11 @@
+{
+  "title": "Card Container",
+  "description": "Three Material Design style cards with border, shadow, and rounded corners",
+  "difficulty": "beginner",
+  "domain": "layout",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "card", "container", "shadow", "style"],
+  "apis_used": ["lv_obj_create", "lv_obj_set_style_shadow_width", "lv_obj_set_style_radius"],
+  "estimated_loc": 50,
+  "source_reference": "BiiL Part2 Ex4"
+}

@@ -1,0 +1,11 @@
+{
+  "title": "Value Changed Sync",
+  "description": "Slider and arc synchronized via value_changed events",
+  "difficulty": "beginner",
+  "domain": "events",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "event", "slider", "arc", "sync"],
+  "apis_used": ["lv_slider_get_value", "lv_arc_set_value", "lv_obj_add_event_cb"],
+  "estimated_loc": 45,
+  "source_reference": "BiiL Part3 Ex2"
+}

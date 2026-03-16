@@ -1,0 +1,11 @@
+{
+  "title": "PIN Entry UI Demo",
+  "description": "Secure PIN pad with numeric keypad, masked display, local hash verification, 3-attempt lockout",
+  "difficulty": "advanced",
+  "domain": "security",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["pin", "security", "keypad", "lockout", "authentication", "ui", "btnmatrix"],
+  "apis_used": ["lv_btnmatrix_create", "lv_timer_create", "lv_label_create"],
+  "estimated_loc": 220,
+  "source_reference": "example_common.h + LVGL btnmatrix"
+}

@@ -1,0 +1,11 @@
+{
+  "title": "Checkbox Options",
+  "description": "Four checkboxes with a summary label showing which options are selected",
+  "difficulty": "beginner",
+  "domain": "lvgl-widgets",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "checkbox", "options", "state"],
+  "apis_used": ["lv_checkbox_create", "lv_checkbox_set_text", "lv_obj_has_state"],
+  "estimated_loc": 50,
+  "source_reference": "BiiL Part1 Ex5"
+}

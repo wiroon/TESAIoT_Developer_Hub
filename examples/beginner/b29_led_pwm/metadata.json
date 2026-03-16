@@ -1,0 +1,11 @@
+{
+  "title": "LED PWM Brightness",
+  "description": "Slider controls PWM duty cycle of Blue LED hardware",
+  "difficulty": "beginner",
+  "domain": "gpio",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["gpio", "pwm", "led", "slider", "analog"],
+  "apis_used": ["cyhal_pwm_init", "cyhal_pwm_set_duty_cycle", "cyhal_pwm_start", "lv_slider_create"],
+  "estimated_loc": 50,
+  "source_reference": "BiiL Part4 Ex3"
+}

@@ -1,0 +1,11 @@
+{
+  "title": "Single Line Chart",
+  "description": "Real-time line chart with timer-driven data updates",
+  "difficulty": "intermediate",
+  "domain": "charts",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "chart", "line", "timer", "real-time"],
+  "apis_used": ["lv_chart_create", "lv_chart_add_series", "lv_chart_set_next_value", "lv_timer_create"],
+  "estimated_loc": 65,
+  "source_reference": "BiiL Part2 Ex1"
+}

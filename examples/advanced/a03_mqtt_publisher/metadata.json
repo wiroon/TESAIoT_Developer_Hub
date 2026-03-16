@@ -1,0 +1,11 @@
+{
+  "title": "MQTT Sensor Publisher",
+  "description": "Connect WiFi, publish JSON sensor data to MQTT broker every 5 seconds",
+  "difficulty": "advanced",
+  "domain": "wifi",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["mqtt", "wifi", "json", "sensor", "imu", "iot", "publish"],
+  "apis_used": ["cy_mqtt_create", "cy_mqtt_connect", "cy_mqtt_publish", "sensor_bmi270_read"],
+  "estimated_loc": 200,
+  "source_reference": "cy_mqtt_api.h + sensor_bmi270"
+}

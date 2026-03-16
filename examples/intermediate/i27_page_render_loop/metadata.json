@@ -1,0 +1,11 @@
+{
+  "title": "Page Render Loop",
+  "description": "Timer-driven render callback updating sensor data every frame in dashboard pattern",
+  "difficulty": "intermediate",
+  "domain": "page-manager",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["page-manager", "render", "timer", "dashboard", "sensor", "frame-update"],
+  "apis_used": ["lv_timer_create", "page_def_t", "sensor_bmi270_read"],
+  "estimated_loc": 85,
+  "source_reference": "BiiL Part4 Ex5"
+}

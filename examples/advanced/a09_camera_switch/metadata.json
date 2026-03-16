@@ -1,0 +1,11 @@
+{
+  "title": "Camera Source Switch",
+  "description": "Runtime switch between DVP (OV7675) and USB UVC camera with status display",
+  "difficulty": "advanced",
+  "domain": "camera",
+  "boards": ["ai_kit"],
+  "tags": ["camera", "dvp", "usb", "uvc", "switch", "ov7675"],
+  "apis_used": ["camera_manager_switch_source", "camera_manager_get_info"],
+  "estimated_loc": 200,
+  "source_reference": "camera_manager.h"
+}

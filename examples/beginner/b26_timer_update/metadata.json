@@ -1,0 +1,11 @@
+{
+  "title": "Timer Uptime Counter",
+  "description": "LVGL timer updates an uptime counter label every second",
+  "difficulty": "beginner",
+  "domain": "events",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "timer", "uptime", "counter", "periodic"],
+  "apis_used": ["lv_timer_create", "lv_timer_get_user_data", "lv_label_set_text_fmt"],
+  "estimated_loc": 40,
+  "source_reference": "BiiL Part3 Ex6"
+}

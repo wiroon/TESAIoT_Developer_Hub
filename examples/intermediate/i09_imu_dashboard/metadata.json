@@ -1,0 +1,11 @@
+{
+  "title": "IMU Dashboard",
+  "description": "Full 6-axis BMI270 dashboard with accel and gyro charts plus value labels",
+  "difficulty": "intermediate",
+  "domain": "dashboards",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "dashboard", "imu", "bmi270", "accelerometer", "gyroscope", "cards"],
+  "apis_used": ["lv_chart_create", "lv_chart_add_series", "lv_obj_create", "sensor_bmi270_read"],
+  "estimated_loc": 150,
+  "source_reference": "BiiL Part2 Ex9"
+}

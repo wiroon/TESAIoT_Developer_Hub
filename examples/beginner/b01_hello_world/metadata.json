@@ -1,0 +1,11 @@
+{
+  "title": "Hello World Label",
+  "description": "Display Hello BENTO on screen with LVGL labels and basic styling",
+  "difficulty": "beginner",
+  "domain": "lvgl-widgets",
+  "boards": ["ai_kit", "eva_kit"],
+  "tags": ["lvgl", "label", "text", "styling", "color"],
+  "apis_used": ["lv_label_create", "lv_label_set_text", "lv_obj_align", "lv_obj_set_style_text_color"],
+  "estimated_loc": 30,
+  "source_reference": "BiiL Part1 Ex1"
+}
