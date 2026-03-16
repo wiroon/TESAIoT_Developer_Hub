@@ -1,6 +1,6 @@
 {
-  "title": "Face Detection with ML",
-  "description": "SSD Nano face detection on camera frames with bounding box overlay on LVGL canvas",
+  "title": "[UI Concept] Face Detection with ML",
+  "description": "UI Concept — Face detection overlay layout. Requires camera + ML inference integration (not yet available via IPC)",
   "difficulty": "advanced",
   "domain": "camera",
   "boards": [

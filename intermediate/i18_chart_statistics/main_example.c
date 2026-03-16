@@ -4,7 +4,7 @@
  * Shows min/max/avg statistics for BMI270 acceleration data with a
  * line chart and live statistical readouts.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if !BSP_HAS_BMI270
 #error "This example requires BMI270"

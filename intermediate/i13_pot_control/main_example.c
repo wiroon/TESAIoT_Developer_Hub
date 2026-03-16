@@ -4,7 +4,7 @@
  * Potentiometer simultaneously controlling an arc gauge, bar indicator,
  * and numeric label. Eva Kit only (requires BSP_HAS_POTENTIOMETER).
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if !BSP_HAS_POTENTIOMETER
 #error "This example requires Potentiometer (Eva Kit only)"

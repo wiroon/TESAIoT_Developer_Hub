@@ -1,6 +1,6 @@
 {
-  "title": "Camera Preview",
-  "description": "USB UVC camera capture to RGB565 frame displayed on LVGL canvas with FPS counter",
+  "title": "[UI Concept] Camera Preview",
+  "description": "UI Concept — Camera preview layout with LVGL canvas. Requires camera hardware integration (not yet available via IPC)",
   "difficulty": "advanced",
   "domain": "camera",
   "boards": [

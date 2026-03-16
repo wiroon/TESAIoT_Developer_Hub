@@ -1,12 +1,16 @@
 /**
  * @file    main_example.c
- * @brief   Status Bar — LED indicators showing board state
+ * @brief   GPIO Status Bar — Real-time board status indicators
  *
- * A horizontal status bar with three LED indicator dots.
- * Toggle buttons control each indicator on/off.
+ * Three status indicators driven by real hardware signals:
+ *   PWR — Always ON (board is powered)
+ *   NET — WiFi connected state via ipc_sensorhub_wifi_connected()
+ *   ACT — Sensor activity heartbeat via ipc_sensorhub_snapshot()
+ *
+ * @board  AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 #define NUM_INDICATORS 3
 
@@ -28,12 +32,27 @@ static void update_dot(indicator_t *ind)
                           ind->name, ind->active ? "ON" : "off");
 }
 
-static void toggle_cb(lv_event_t *e)
+/* Poll real hardware status every 500ms */
+static void status_poll_cb(lv_timer_t *t)
 {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-    indicator_t *ind = (indicator_t *)lv_event_get_user_data(e);
-    ind->active = !ind->active;
-    update_dot(ind);
+    (void)t;
+
+    /* PWR: always on (board is running) */
+    indicators[0].active = true;
+
+    /* NET: real WiFi connected state from CM33 via IPC */
+    indicators[1].active = ipc_sensorhub_wifi_connected();
+
+    /* ACT: sensor activity — true if any sensor has new data */
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
+    indicators[2].active = (snap.has_bmi270 && snap.bmi270_changed) ||
+                           (snap.has_dps368 && snap.dps368_changed) ||
+                           (snap.has_sht40  && snap.sht40_changed);
+
+    for (int i = 0; i < NUM_INDICATORS; i++) {
+        update_dot(&indicators[i]);
+    }
 }
 
 static void create_status_item(lv_obj_t *bar, indicator_t *ind)
@@ -52,6 +71,7 @@ static void create_status_item(lv_obj_t *bar, indicator_t *ind)
     lv_obj_set_size(ind->dot, 16, 16);
     lv_obj_set_style_radius(ind->dot, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(ind->dot, lv_palette_main(LV_PALETTE_GREY), 0);
+    lv_obj_set_style_bg_opa(ind->dot, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(ind->dot, 0, 0);
 
     char buf[16];
@@ -73,16 +93,20 @@ void example_main(lv_obj_t *parent)
     lv_obj_t *title = example_label_create(parent, "Status Bar Monitor",
                                             &lv_font_montserrat_20, UI_COLOR_TEXT);
     /* แถบสถานะ GPIO */
-    example_label_create(parent,
-        "แถบสถานะ GPIO",
-        &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+    thai_label(parent, "แถบสถานะ (สัญญาณจริง)", 14, UI_COLOR_TEXT_DIM);
 
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 5);
+
+    /* Info */
+    lv_obj_t *info = example_label_create(parent,
+        "PWR=board power | NET=WiFi | ACT=sensor activity",
+        &lv_font_montserrat_14, UI_COLOR_TEXT_DIM);
+    lv_obj_align(info, LV_ALIGN_TOP_MID, 0, 30);
 
     /* Status bar */
     lv_obj_t *bar = lv_obj_create(parent);
     lv_obj_set_size(bar, 600, 55);
-    lv_obj_align(bar, LV_ALIGN_TOP_MID, 0, 35);
+    lv_obj_align(bar, LV_ALIGN_CENTER, 0, -20);
     lv_obj_set_flex_flow(bar, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(bar, LV_FLEX_ALIGN_SPACE_EVENLY,
                           LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
@@ -92,14 +116,9 @@ void example_main(lv_obj_t *parent)
         create_status_item(bar, &indicators[i]);
     }
 
-    /* Toggle buttons */
-    for (int i = 0; i < NUM_INDICATORS; i++) {
-        lv_obj_t *btn = lv_btn_create(parent);
-        lv_obj_set_size(btn, 140, 50);
-        lv_obj_align(btn, LV_ALIGN_CENTER, (i - 1) * 170, 40);
-        lv_obj_add_event_cb(btn, toggle_cb, LV_EVENT_CLICKED, &indicators[i]);
-        lv_obj_t *lbl = lv_label_create(btn);
-        lv_label_set_text_fmt(lbl, "Toggle %s", names[i]);
-        lv_obj_center(lbl);
-    }
+    /* Start polling timer (500ms) */
+    lv_timer_create(status_poll_cb, 500, NULL);
+
+    /* Initial update */
+    status_poll_cb(NULL);
 }

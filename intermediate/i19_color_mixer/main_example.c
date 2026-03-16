@@ -4,7 +4,7 @@
  * Three sliders (R, G, B) that mix a color displayed in a large preview box.
  * Shows hex code and individual channel values.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 typedef struct {
     lv_obj_t *slider_r, *slider_g, *slider_b;

@@ -6,7 +6,7 @@
  *
  * Adapted from production page_motion.c tilt angle calculation.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if !BSP_HAS_BMI270
 #error "This example requires BMI270"

@@ -7,7 +7,7 @@
  *
  * Adapted from production page_controls.c potentiometer section.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if BSP_HAS_POTENTIOMETER
 

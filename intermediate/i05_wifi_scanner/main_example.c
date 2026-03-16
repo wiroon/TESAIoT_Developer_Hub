@@ -4,7 +4,7 @@
  * Scans for nearby WiFi networks and displays SSID, RSSI signal bar,
  * channel, and security type in a scrollable list.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 #include "wifi_manager.h"
 
 #define MAX_NETWORKS    20

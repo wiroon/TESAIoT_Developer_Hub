@@ -11,7 +11,7 @@
  * @author   TESAIoT
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 /* ---------------------------------------------------------------------------
  * Colors
@@ -182,6 +182,12 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_text_font(th_sub, &lv_font_noto_thai_14, 0);
     lv_obj_set_style_text_color(th_sub, UI_COLOR_TEXT_DIM, 0);
     lv_obj_align(th_sub, LV_ALIGN_TOP_MID, 0, 28);
+
+    /* UI Reference banner */
+    lv_obj_t *ref_banner = lv_label_create(parent);
+    lv_label_set_text(ref_banner, LV_SYMBOL_WARNING " UI Reference — real benchmarks in a17_hsm_crypto");
+    lv_obj_set_style_text_color(ref_banner, lv_color_hex(0xFF9800), 0);
+    lv_obj_align(ref_banner, LV_ALIGN_TOP_RIGHT, -10, 8);
 
     /* Status */
     s_ctx.status_label = lv_label_create(parent);

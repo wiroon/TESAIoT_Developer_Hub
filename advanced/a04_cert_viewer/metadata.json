@@ -1,6 +1,6 @@
 {
-  "title": "Certificate Viewer",
-  "description": "X.509 certificate chain viewer with parsed fields, validity status, and chain visualization",
+  "title": "[UI Reference] Certificate Viewer",
+  "description": "UI Reference — X.509 certificate viewer layout. Real cert parsing available via IPC_CMD_HSM_READ_CERT (0xB7)",
   "difficulty": "advanced",
   "domain": "Security",
   "tags": [

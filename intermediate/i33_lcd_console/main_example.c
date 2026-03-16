@@ -18,7 +18,7 @@
  * @author  TESAIoT
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 /* ── Configuration ─────────────────────────────────────────────────── */
 #define CONSOLE_MAX_LINES    50

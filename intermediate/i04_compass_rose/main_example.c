@@ -10,7 +10,7 @@
  * Core:   CM55 (display + UI)
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 /* ── Layout Constants ────────────────────────────────────────────── */
 #define COMPASS_SIZE       250

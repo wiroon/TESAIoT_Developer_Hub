@@ -4,7 +4,7 @@
  * Temperature + Humidity + Pressure monitor with large readouts,
  * trend indicators, and comfort zone assessment.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #define UPDATE_MS  500
 

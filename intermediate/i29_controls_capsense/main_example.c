@@ -6,7 +6,7 @@
  *
  * Adapted from production page_controls.c CapSense section.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if BSP_HAS_CAPSENSE
 

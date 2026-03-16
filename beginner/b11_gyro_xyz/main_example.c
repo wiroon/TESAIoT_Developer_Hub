@@ -7,7 +7,7 @@
  * for X, Y, Z with arc gauges.
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if BSP_HAS_BMI270
 

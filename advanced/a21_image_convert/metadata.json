@@ -1,6 +1,6 @@
 {
-  "title": "Camera Frame Capture",
-  "description": "Camera frame capture with JPEG encoding and LVGL image widget preview via IPC frame share",
+  "title": "[UI Concept] Camera Frame Capture",
+  "description": "UI Concept — Camera capture with JPEG encoding layout. Requires IPC frame share integration (not yet available)",
   "difficulty": "advanced",
   "domain": "camera",
   "boards": [

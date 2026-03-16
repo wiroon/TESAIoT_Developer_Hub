@@ -9,7 +9,7 @@
 #ifndef PAGES_H
 #define PAGES_H
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 void page_hello_create(lv_obj_t *parent);
 void page_button_create(lv_obj_t *parent);

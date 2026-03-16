@@ -4,7 +4,7 @@
  * Logs sensor readings with timestamp into a scrollable list.
  * Configurable sample rate and up to 200 entries before oldest are removed.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #define UPDATE_MS       1000
 #define MAX_ENTRIES     200

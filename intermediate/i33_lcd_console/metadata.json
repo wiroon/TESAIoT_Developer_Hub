@@ -23,6 +23,6 @@
     "vsnprintf"
   ],
   "estimated_loc": 180,
-  "source_reference": "example_common.h + FreeRTOS tick",
+  "source_reference": "pse84_common.h + FreeRTOS tick",
   "id": "i33_lcd_console"
 }

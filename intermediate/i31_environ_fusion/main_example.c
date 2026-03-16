@@ -7,7 +7,7 @@
  *
  * Adapted from production page_environ.c derived metrics.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if !(BSP_HAS_DPS368 || BSP_HAS_SHT40)
 #error "This example requires DPS368 or SHT40 (AI Kit)"

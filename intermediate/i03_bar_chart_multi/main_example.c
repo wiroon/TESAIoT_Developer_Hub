@@ -4,7 +4,7 @@
  * Bar chart comparing normalized sensor values side by side.
  * Each bar represents a different sensor reading scaled to 0–100.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #define UPDATE_MS  500
 

@@ -1,5 +1,5 @@
 /**
- * example_common.h — Shared header for all TESAIoT Developer Hub C examples
+ * pse84_common.h — Shared header for all TESAIoT Developer Hub C examples
  *
  * This header provides the common includes, macros, and forward declarations
  * needed by every example. Each example's main_example.c includes this file
@@ -11,8 +11,8 @@
  * RTOS:    FreeRTOS 10.6
  */
 
-#ifndef EXAMPLE_COMMON_H
-#define EXAMPLE_COMMON_H
+#ifndef PSE84_COMMON_H
+#define PSE84_COMMON_H
 
 /* ── LVGL 9.2 ─────────────────────────────────────────────────────── */
 #include "lvgl.h"
@@ -20,6 +20,10 @@
 /* ── Infineon HAL & BSP ───────────────────────────────────────────── */
 #include "cybsp.h"
 #include "cyhal.h"
+
+/* ── PDL GPIO (direct register access from CM55 — no IPC needed) ── */
+#include "cy_gpio.h"
+#include "cycfg_pins.h"
 
 /* ── FreeRTOS ─────────────────────────────────────────────────────── */
 #include "FreeRTOS.h"
@@ -81,13 +85,23 @@
 #define UI_CARD_SHADOW       8
 #define UI_CARD_PAD          12
 
-/* ── Common GPIO Pins (KIT_PSE84_AI) ─────────────────────────────── */
-/* Adjust per board BSP — these are the most common pins */
-#define PIN_LED_RED       P13_7
-#define PIN_LED_GREEN     P13_4
-#define PIN_LED_BLUE      P13_3
-#define PIN_BUTTON_SW1    P5_2
-#define PIN_BUTTON_SW2    P5_3
+/* ── GPIO Pin Access (direct from CM55 — NOT PPC-protected) ──────── */
+/*
+ * Use BSP-defined macros for portable pin access across boards:
+ *
+ *   CYBSP_USER_LED1_PORT / _PIN   — P10.7  User LED 1 (active LOW)
+ *   CYBSP_USER_LED2_PORT / _PIN   — P10.5  User LED 2 (active LOW)
+ *   CYBSP_LED_RGB_RED_PORT / _PIN — P20.6  RGB Red   (AI Kit)
+ *   CYBSP_LED_RGB_GREEN_PORT/_PIN — P20.4  RGB Green (AI Kit)
+ *   CYBSP_LED_RGB_BLUE_PORT / _PIN— P20.5  RGB Blue  (AI Kit)
+ *   CYBSP_USER_BTN1_PORT / _PIN   — P7.0   SW1 button (active LOW)
+ *
+ * Example:
+ *   Cy_GPIO_Inv(CYBSP_USER_LED1_PORT, CYBSP_USER_LED1_PIN);  // toggle
+ *   bool pressed = (Cy_GPIO_Read(CYBSP_USER_BTN1_PORT, CYBSP_USER_BTN1_PIN) == 0);
+ *
+ * Note: AI Kit has 1 user button (SW1). Eva Kit has 2 (SW1 + SW2).
+ */
 
 /* ── Example Entry Point ──────────────────────────────────────────── */
 /**
@@ -151,4 +165,4 @@ static inline lv_obj_t *thai_label(lv_obj_t *parent, const char *text,
     return lbl;
 }
 
-#endif /* EXAMPLE_COMMON_H */
+#endif /* PSE84_COMMON_H */

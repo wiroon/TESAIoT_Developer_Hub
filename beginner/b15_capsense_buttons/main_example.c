@@ -6,7 +6,7 @@
  * using ipc_sensorhub_snapshot(). Eva Kit only (BSP_HAS_CAPSENSE).
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if BSP_HAS_CAPSENSE
 

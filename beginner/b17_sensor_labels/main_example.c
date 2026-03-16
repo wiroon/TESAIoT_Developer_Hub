@@ -7,7 +7,7 @@
  * Adapts automatically to AI Kit or Eva Kit hardware.
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 typedef struct {
     /* BMI270 — always available */

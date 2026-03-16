@@ -4,7 +4,7 @@
  * 2D bubble level using BMI270 accelerometer. A circle (bubble) moves
  * on a crosshair grid based on tilt angle.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if !BSP_HAS_BMI270
 #error "This example requires BMI270"

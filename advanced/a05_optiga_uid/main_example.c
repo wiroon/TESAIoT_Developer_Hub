@@ -1,18 +1,20 @@
 /**
  * @file    main_example.c
- * @brief   Security Info Display — HSM Chip Overview
+ * @brief   Security Info Display — Real OPTIGA Trust M Chip Data
  *
  * @description
- *   Displays hardware security module (OPTIGA Trust M) chip information
- *   using LVGL cards: chip UID, lifecycle state, available certificate
- *   slots, and supported algorithms. Static display — no direct OPTIGA
- *   calls required (informational overview for the MTB template).
+ *   Reads OPTIGA Trust M chip information via IPC_CMD_HSM_REQUEST
+ *   (0xB5) from CM55 → CM33_NS → OPTIGA I2C. Displays real UID,
+ *   lifecycle state, certificate slot status, and supported algorithms.
+ *
+ *   Falls back to placeholder data if IPC times out (chip not present).
  *
  * @board    AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  * @author   TESAIoT
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
+#include "ipc_communication.h"
 
 /* ---------------------------------------------------------------------------
  * Colors
@@ -26,11 +28,98 @@
 #define COLOR_SECTION           lv_color_hex(0x7C4DFF)
 
 /* ---------------------------------------------------------------------------
- * Chip info (static reference data for OPTIGA Trust M SLS 32AIA)
+ * IPC shared-memory buffers for HSM request
  * --------------------------------------------------------------------------- */
-static const char *CHIP_NAME       = "Infineon OPTIGA Trust M (SLS 32AIA)";
-static const char *CHIP_UID_DEMO   = "CD:16:33:01:00:1C:00:05:00:00:0B:04:D5:03:70:00:12:00:17:00:03:00:00:00:9E:00:03";
-static const char *LIFECYCLE       = "Operational (0x07)";
+CY_SECTION_SHAREDMEM static ipc_msg_t      s_hsm_msg;
+CY_SECTION_SHAREDMEM static ipc_response_t s_hsm_resp;
+
+/* Response offsets (from production page_hsm.c) */
+#define HSM_RESP_UID_OFF    0   /* 27 bytes */
+#define HSM_RESP_LCS_OFF   27   /* 1 byte */
+#define HSM_RESP_CERT_OFF  32   /* 4 bytes (cert presence flags) */
+
+/* Parsed data buffers */
+static char s_uid_hex[82];    /* 27 bytes * 3 chars + nul */
+static char s_lcs_str[32];
+static char s_cert_status[4][20];
+static bool s_optiga_ok = false;
+
+static const char *CHIP_NAME = "Infineon OPTIGA Trust M (SLS 32AIA)";
+
+/* ---------------------------------------------------------------------------
+ * Read real OPTIGA data via IPC_CMD_HSM_REQUEST (CM55 → CM33)
+ * --------------------------------------------------------------------------- */
+static void read_optiga_data(void)
+{
+    memset(&s_hsm_msg, 0, sizeof(s_hsm_msg));
+    memset(&s_hsm_resp, 0, sizeof(s_hsm_resp));
+
+    s_hsm_msg.client_id = CM33_IPC_HSM_CLIENT_ID;
+    s_hsm_msg.intr_mask = CY_IPC_CYPIPE_INTR_MASK_EP1;
+    s_hsm_msg.cmd       = IPC_CMD_HSM_REQUEST;
+    s_hsm_msg.value     = (uint32_t)(uintptr_t)&s_hsm_resp;
+    s_hsm_resp.ready    = 0;
+
+    /* Send with retry */
+    cy_en_ipc_pipe_status_t st = CY_IPC_PIPE_ERROR_NO_IPC;
+    for (int i = 0; i < 20; i++) {
+        st = Cy_IPC_Pipe_SendMessage(
+            CM33_IPC_PIPE_EP_ADDR, CM55_IPC_PIPE_EP_ADDR,
+            (void *)&s_hsm_msg, NULL);
+        if (st == CY_IPC_PIPE_SUCCESS) break;
+        Cy_SysLib_DelayUs(200);
+    }
+    if (st != CY_IPC_PIPE_SUCCESS) goto fallback;
+
+    /* Wait for response (max 10s) */
+    uint32_t elapsed = 0;
+    while (s_hsm_resp.ready != 1 && elapsed < 10000) {
+        Cy_SysLib_DelayUs(1000);
+        elapsed++;
+    }
+    if (s_hsm_resp.ready != 1 || s_hsm_resp.status != 0) goto fallback;
+
+    s_optiga_ok = true;
+
+    /* Parse UID (27 bytes → hex string with colons) */
+    {
+        const uint8_t *uid = s_hsm_resp.data + HSM_RESP_UID_OFF;
+        char *p = s_uid_hex;
+        for (int i = 0; i < 27; i++) {
+            if (i > 0) *p++ = ':';
+            p += snprintf(p, (size_t)(s_uid_hex + sizeof(s_uid_hex) - p),
+                          "%02X", uid[i]);
+        }
+    }
+
+    /* Parse LCS */
+    {
+        uint8_t lcs = s_hsm_resp.data[HSM_RESP_LCS_OFF];
+        switch (lcs) {
+            case 0x01: snprintf(s_lcs_str, sizeof(s_lcs_str), "Creation (0x01)"); break;
+            case 0x03: snprintf(s_lcs_str, sizeof(s_lcs_str), "Initialization (0x03)"); break;
+            case 0x07: snprintf(s_lcs_str, sizeof(s_lcs_str), "Operational (0x07)"); break;
+            case 0x0F: snprintf(s_lcs_str, sizeof(s_lcs_str), "Terminated (0x0F)"); break;
+            default:   snprintf(s_lcs_str, sizeof(s_lcs_str), "Unknown (0x%02X)", lcs); break;
+        }
+    }
+
+    /* Parse cert presence flags */
+    for (int i = 0; i < 4; i++) {
+        snprintf(s_cert_status[i], sizeof(s_cert_status[i]),
+                 s_hsm_resp.data[HSM_RESP_CERT_OFF + i] ? "Present" : "Empty");
+    }
+    return;
+
+fallback:
+    s_optiga_ok = false;
+    snprintf(s_uid_hex, sizeof(s_uid_hex),
+             "IPC timeout — chip not responding");
+    snprintf(s_lcs_str, sizeof(s_lcs_str), "Unknown");
+    for (int i = 0; i < 4; i++) {
+        snprintf(s_cert_status[i], sizeof(s_cert_status[i]), "Unknown");
+    }
+}
 
 typedef struct {
     const char *slot;
@@ -115,6 +204,9 @@ static void add_kv_row(lv_obj_t *parent, const char *key, const char *value,
  * --------------------------------------------------------------------------- */
 void example_main(lv_obj_t *parent)
 {
+    /* Read real OPTIGA data via IPC (falls back on timeout) */
+    read_optiga_data();
+
     /* Title */
     lv_obj_t *title = lv_label_create(parent);
     lv_label_set_text(title, LV_SYMBOL_EYE_OPEN " Security Info — OPTIGA Trust M");
@@ -123,18 +215,22 @@ void example_main(lv_obj_t *parent)
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
 
     /* อ่าน UID ชิป OPTIGA */
-    lv_obj_t *th_sub = lv_label_create(parent);
-    lv_label_set_text(th_sub, "อ่าน UID ชิป OPTIGA");
-    lv_obj_set_style_text_font(th_sub, &lv_font_noto_thai_14, 0);
-    lv_obj_set_style_text_color(th_sub, UI_COLOR_TEXT_DIM, 0);
-    lv_obj_align(th_sub, LV_ALIGN_TOP_MID, 0, 28);
+    thai_label(parent, "อ่าน UID ชิป OPTIGA", 14, UI_COLOR_TEXT_DIM);
+
+    /* Data source indicator */
+    lv_obj_t *src_lbl = lv_label_create(parent);
+    lv_label_set_text(src_lbl, s_optiga_ok ? LV_SYMBOL_OK " Live IPC Data"
+                                           : LV_SYMBOL_WARNING " IPC Timeout — Fallback");
+    lv_obj_set_style_text_color(src_lbl, s_optiga_ok ? COLOR_SUCCESS : COLOR_WARNING, 0);
+    lv_obj_align(src_lbl, LV_ALIGN_TOP_RIGHT, -10, 8);
 
     /* ---- Chip Identity Card (top-left) ---- */
     lv_obj_t *id_card = create_section(parent, LV_SYMBOL_EYE_OPEN " Chip Identity",
                                         380, 160, 8, 32);
 
     add_kv_row(id_card, "Chip:", CHIP_NAME, COLOR_TEXT);
-    add_kv_row(id_card, "Lifecycle:", LIFECYCLE, COLOR_SUCCESS);
+    add_kv_row(id_card, "Lifecycle:", s_lcs_str,
+               s_optiga_ok ? COLOR_SUCCESS : COLOR_WARNING);
     add_kv_row(id_card, "I2C Addr:", "0x30 (SCB0, 100 kHz)", COLOR_TEXT);
 
     lv_obj_t *uid_title = lv_label_create(id_card);
@@ -142,8 +238,8 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_text_color(uid_title, COLOR_ACCENT, 0);
 
     lv_obj_t *uid_val = lv_label_create(id_card);
-    lv_label_set_text(uid_val, CHIP_UID_DEMO);
-    lv_obj_set_style_text_color(uid_val, COLOR_WARNING, 0);
+    lv_label_set_text(uid_val, s_uid_hex);
+    lv_obj_set_style_text_color(uid_val, s_optiga_ok ? COLOR_WARNING : COLOR_TEXT, 0);
     lv_label_set_long_mode(uid_val, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(uid_val, 350);
 
@@ -168,10 +264,14 @@ void example_main(lv_obj_t *parent)
         lv_label_set_text(type, CERT_SLOTS[i].type);
         lv_obj_set_style_text_color(type, COLOR_TEXT, 0);
 
+        /* Use real cert status from IPC if available */
         lv_obj_t *status = lv_label_create(row);
-        lv_label_set_text(status, CERT_SLOTS[i].status);
-        bool pre = (i == 0);
-        lv_obj_set_style_text_color(status, pre ? COLOR_SUCCESS : COLOR_WARNING, 0);
+        lv_label_set_text(status, s_optiga_ok ? s_cert_status[i]
+                                              : CERT_SLOTS[i].status);
+        bool present = s_optiga_ok
+            ? (strcmp(s_cert_status[i], "Present") == 0)
+            : (i == 0);
+        lv_obj_set_style_text_color(status, present ? COLOR_SUCCESS : COLOR_WARNING, 0);
     }
 
     /* ---- Supported Algorithms Card (bottom) ---- */

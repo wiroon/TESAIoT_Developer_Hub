@@ -4,7 +4,7 @@
  * Visualizes CapSense button presses and slider position with animated
  * feedback. Eva Kit only (requires BSP_HAS_CAPSENSE).
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if !BSP_HAS_CAPSENSE
 #error "This example requires CapSense (Eva Kit only)"

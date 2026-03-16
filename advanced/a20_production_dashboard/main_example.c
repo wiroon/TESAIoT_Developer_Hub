@@ -10,7 +10,7 @@
  * @author   TESAIoT
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 /* ── Layout ─────────────────────────────────────────────────────── */
 #define CARD_W       175
@@ -73,54 +73,90 @@ static lv_obj_t *create_sensor_card(lv_obj_t *parent, const char *title,
     return card;
 }
 
-/* ── Timer: update sensor values ────────────────────────────────── */
+/* ── Timer: update sensor values from real hardware ────────────── */
 static void dashboard_timer_cb(lv_timer_t *t)
 {
     (void)t;
-    static uint32_t frame = 0;
-    frame++;
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
 
-    /* IMU (all boards) */
-    float accel_mag = 0.98f + (float)(frame % 20) * 0.01f;
-    lv_label_set_text_fmt(s_val_lbl[CARD_IMU], "%.2f g", accel_mag);
+    /* IMU (all boards) — real accelerometer magnitude */
+    float accel_mag = 0.0f;
+    if (snap.has_bmi270) {
+        float ax = snap.bmi270.ax / 16384.0f;
+        float ay = snap.bmi270.ay / 16384.0f;
+        float az = snap.bmi270.az / 16384.0f;
+        accel_mag = sqrtf(ax * ax + ay * ay + az * az);
+        lv_label_set_text_fmt(s_val_lbl[CARD_IMU], "%.2f g", (double)accel_mag);
+        lv_obj_set_style_bg_color(s_status_dots[0], UI_COLOR_SUCCESS, 0);
+    } else {
+        lv_label_set_text(s_val_lbl[CARD_IMU], "N/A");
+        lv_obj_set_style_bg_color(s_status_dots[0], UI_COLOR_TEXT_DIM, 0);
+    }
 
     /* Slot 1: Pressure (AI Kit) or CapSense (Eva Kit) */
 #if BSP_HAS_DPS368
-    int pressure = 1013 + (int)(frame % 8) - 4;
-    lv_label_set_text_fmt(s_val_lbl[CARD_SLOT1], "%d hPa", pressure);
+    if (snap.has_dps368) {
+        float press = snap.dps368.pressure_x100 / 100.0f;
+        lv_label_set_text_fmt(s_val_lbl[CARD_SLOT1], "%.0f hPa", (double)press);
+        lv_obj_set_style_bg_color(s_status_dots[1], UI_COLOR_SUCCESS, 0);
+    } else {
+        lv_label_set_text(s_val_lbl[CARD_SLOT1], "--");
+        lv_obj_set_style_bg_color(s_status_dots[1], UI_COLOR_TEXT_DIM, 0);
+    }
 #elif BSP_HAS_CAPSENSE
-    int touch = (frame % 30 < 15) ? 1 : 0;
-    lv_label_set_text_fmt(s_val_lbl[CARD_SLOT1], "Btn %d", touch);
+    if (snap.has_capsense) {
+        lv_label_set_text_fmt(s_val_lbl[CARD_SLOT1], "Btn %d/%d",
+                              snap.capsense.btn0_pressed, snap.capsense.btn1_pressed);
+        lv_obj_set_style_bg_color(s_status_dots[1], UI_COLOR_SUCCESS, 0);
+    } else {
+        lv_label_set_text(s_val_lbl[CARD_SLOT1], "--");
+        lv_obj_set_style_bg_color(s_status_dots[1], UI_COLOR_TEXT_DIM, 0);
+    }
 #else
     lv_label_set_text(s_val_lbl[CARD_SLOT1], "N/A");
+    lv_obj_set_style_bg_color(s_status_dots[1], UI_COLOR_TEXT_DIM, 0);
 #endif
 
     /* Slot 2: Humidity (AI Kit) or Potentiometer (Eva Kit) */
 #if BSP_HAS_SHT40
-    int humid = 55 + (int)(frame % 15);
-    lv_label_set_text_fmt(s_val_lbl[CARD_SLOT2], "%d %%RH", humid);
+    if (snap.has_sht40) {
+        float hum = snap.sht40.humidity_x100 / 100.0f;
+        lv_label_set_text_fmt(s_val_lbl[CARD_SLOT2], "%.0f %%RH", (double)hum);
+    } else {
+        lv_label_set_text(s_val_lbl[CARD_SLOT2], "--");
+    }
 #elif BSP_HAS_POTENTIOMETER
-    int pot_val = (int)((frame * 7) % 4096);
-    lv_label_set_text_fmt(s_val_lbl[CARD_SLOT2], "%d", pot_val);
+    if (snap.has_pot) {
+        lv_label_set_text_fmt(s_val_lbl[CARD_SLOT2], "%.1f%%",
+                              (double)(snap.pot.percent_x10 / 10.0f));
+    } else {
+        lv_label_set_text(s_val_lbl[CARD_SLOT2], "--");
+    }
 #else
     lv_label_set_text(s_val_lbl[CARD_SLOT2], "N/A");
 #endif
 
     /* Magnetometer */
 #if BSP_HAS_BMM350
-    int heading = (int)(frame * 3) % 360;
-    lv_label_set_text_fmt(s_val_lbl[CARD_MAG], "%d\xc2\xb0", heading);
+    if (snap.has_bmm350) {
+        int heading = snap.bmm350.heading_x10 / 10;
+        lv_label_set_text_fmt(s_val_lbl[CARD_MAG], "%d\xc2\xb0", heading);
+        lv_obj_set_style_bg_color(s_status_dots[2], UI_COLOR_SUCCESS, 0);
+    } else {
+        lv_label_set_text(s_val_lbl[CARD_MAG], "--");
+        lv_obj_set_style_bg_color(s_status_dots[2], UI_COLOR_TEXT_DIM, 0);
+    }
 #else
     lv_label_set_text(s_val_lbl[CARD_MAG], "N/A");
+    lv_obj_set_style_bg_color(s_status_dots[2], UI_COLOR_TEXT_DIM, 0);
 #endif
 
-    /* Chart: add accel magnitude */
+    /* Chart: add real accel magnitude */
     lv_chart_set_next_value(s_chart, s_series, (int32_t)(accel_mag * 100));
 
-    /* Status dots: green = OK */
-    for (int i = 0; i < 4; i++) {
-        lv_obj_set_style_bg_color(s_status_dots[i], UI_COLOR_SUCCESS, 0);
-    }
+    /* SYS status: always green (board running) */
+    lv_obj_set_style_bg_color(s_status_dots[3], UI_COLOR_SUCCESS, 0);
 
     /* Uptime */
     uint32_t sec = (xTaskGetTickCount() * portTICK_PERIOD_MS) / 1000;

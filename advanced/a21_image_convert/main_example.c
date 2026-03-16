@@ -12,7 +12,7 @@
  * @author   TESAIoT
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 /* ---------------------------------------------------------------------------
  * Constants
@@ -308,6 +308,12 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_text_font(th_sub, &lv_font_noto_thai_14, 0);
     lv_obj_set_style_text_color(th_sub, UI_COLOR_TEXT_DIM, 0);
     lv_obj_align(th_sub, LV_ALIGN_TOP_MID, 0, 28);
+
+    /* UI Concept banner */
+    lv_obj_t *concept = lv_label_create(parent);
+    lv_label_set_text(concept, LV_SYMBOL_WARNING " UI Concept — IPC frame share not yet available");
+    lv_obj_set_style_text_color(concept, lv_color_hex(0xFF9800), 0);
+    lv_obj_align(concept, LV_ALIGN_TOP_RIGHT, -10, 8);
 
     /* === Format tab buttons === */
     for (int i = 0; i < NUM_FORMATS; i++) {

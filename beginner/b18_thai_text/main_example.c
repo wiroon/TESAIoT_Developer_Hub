@@ -6,7 +6,7 @@
  * Uses thai_label() helper for clean, readable Thai strings.
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 void example_main(lv_obj_t *parent)
 {

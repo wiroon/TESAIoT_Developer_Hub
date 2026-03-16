@@ -6,7 +6,7 @@
  * On-screen LED widget mirrors the physical LED state.
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 #include "ipc_communication.h"
 
 #define IPC_CMD_GPIO_LED   (0x80)

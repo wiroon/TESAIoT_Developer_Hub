@@ -1,12 +1,19 @@
 /**
  * @file    main_example.c
- * @brief   Multi LED Panel — Grid of 3 LED indicators with switches
+ * @brief   Multi LED Panel — Grid of 3 real LEDs with switch controls
  *
- * Three virtual LEDs (Red, Green, Blue) with switch controls.
- * All ON / All OFF buttons for batch control.
+ * Three switches control real hardware LEDs via Cy_GPIO_Set/Clr().
+ * LVGL LED widgets mirror the actual GPIO state.
+ *
+ * Hardware:
+ *   LED1 (CYBSP_USER_LED1)       — P10.7 (active LOW)
+ *   LED2 (CYBSP_USER_LED2)       — P10.5 (active LOW)
+ *   RGB Red (CYBSP_LED_RGB_RED)  — P20.6 (active LOW)
+ *
+ * @board  AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 #define NUM_LEDS 3
 
@@ -15,13 +22,27 @@ typedef struct {
     lv_palette_t      color;
     lv_obj_t         *led_widget;
     lv_obj_t         *sw_widget;
+    GPIO_PRT_Type    *port;
+    uint32_t          pin;
 } led_def_t;
 
 static led_def_t leds[NUM_LEDS] = {
-    { "Red",   LV_PALETTE_RED,   NULL, NULL },
-    { "Green", LV_PALETTE_GREEN, NULL, NULL },
-    { "Blue",  LV_PALETTE_BLUE,  NULL, NULL },
+    { "LED1 (P10.7)", LV_PALETTE_GREEN, NULL, NULL, NULL, 0 },
+    { "LED2 (P10.5)", LV_PALETTE_RED,   NULL, NULL, NULL, 0 },
+    { "RGB Red",      LV_PALETTE_RED,   NULL, NULL, NULL, 0 },
 };
+
+static void init_led_hw(void)
+{
+    leds[0].port = CYBSP_USER_LED1_PORT;    leds[0].pin = CYBSP_USER_LED1_PIN;
+    leds[1].port = CYBSP_USER_LED2_PORT;    leds[1].pin = CYBSP_USER_LED2_PIN;
+    leds[2].port = CYBSP_LED_RGB_RED_PORT;  leds[2].pin = CYBSP_LED_RGB_RED_PIN;
+
+    /* Ensure all LEDs start OFF (active LOW: set = off) */
+    for (int i = 0; i < NUM_LEDS; i++) {
+        Cy_GPIO_Set(leds[i].port, leds[i].pin);
+    }
+}
 
 static void switch_event_cb(lv_event_t *e)
 {
@@ -31,9 +52,12 @@ static void switch_event_cb(lv_event_t *e)
     lv_obj_t *sw = lv_event_get_target(e);
     bool on = lv_obj_has_state(sw, LV_STATE_CHECKED);
 
+    /* Drive real hardware LED */
     if (on) {
+        Cy_GPIO_Clr(led->port, led->pin);   /* active LOW: clear = ON */
         lv_led_on(led->led_widget);
     } else {
+        Cy_GPIO_Set(led->port, led->pin);    /* active LOW: set = OFF */
         lv_led_off(led->led_widget);
     }
 }
@@ -42,6 +66,7 @@ static void all_on_cb(lv_event_t *e)
 {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
     for (int i = 0; i < NUM_LEDS; i++) {
+        Cy_GPIO_Clr(leds[i].port, leds[i].pin);
         lv_led_on(leds[i].led_widget);
         lv_obj_add_state(leds[i].sw_widget, LV_STATE_CHECKED);
     }
@@ -51,6 +76,7 @@ static void all_off_cb(lv_event_t *e)
 {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
     for (int i = 0; i < NUM_LEDS; i++) {
+        Cy_GPIO_Set(leds[i].port, leds[i].pin);
         lv_led_off(leds[i].led_widget);
         lv_obj_remove_state(leds[i].sw_widget, LV_STATE_CHECKED);
     }
@@ -58,13 +84,13 @@ static void all_off_cb(lv_event_t *e)
 
 void example_main(lv_obj_t *parent)
 {
+    init_led_hw();
+
     /* Title */
     lv_obj_t *title = example_label_create(parent, "LED Control Panel",
                                             &lv_font_montserrat_20, UI_COLOR_TEXT);
     /* แผงควบคุม LED หลายดวง */
-    example_label_create(parent,
-        "แผงควบคุม LED หลายดวง",
-        &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
+    thai_label(parent, "แผงควบคุม LED หลายดวง (ฮาร์ดแวร์)", 14, UI_COLOR_TEXT_DIM);
 
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 5);
 
@@ -89,7 +115,7 @@ void example_main(lv_obj_t *parent)
         lv_obj_t *name = lv_label_create(row);
         lv_label_set_text(name, leds[i].name);
         lv_obj_set_style_text_font(name, &lv_font_montserrat_16, 0);
-        lv_obj_set_width(name, 100);
+        lv_obj_set_width(name, 140);
 
         /* Virtual LED */
         leds[i].led_widget = lv_led_create(row);

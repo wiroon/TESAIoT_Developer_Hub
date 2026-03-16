@@ -4,7 +4,7 @@
  * Three analog-style arc gauges showing temperature, humidity, and pressure.
  * Uses LVGL arc widgets with value labels.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #define UPDATE_MS  300
 

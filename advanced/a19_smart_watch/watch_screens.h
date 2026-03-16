@@ -8,7 +8,7 @@
 #ifndef WATCH_SCREENS_H
 #define WATCH_SCREENS_H
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 /** Create the digital clock screen (HH:MM:SS + date). */
 lv_obj_t *watch_clock_create(lv_obj_t *parent);

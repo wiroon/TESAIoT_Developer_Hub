@@ -4,7 +4,7 @@
  * Top status bar showing WiFi state, NTP time, and sensor activity
  * indicators. Below is a main content area with sensor summary.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 #include "wifi_manager.h"
 
 #define UPDATE_MS  500

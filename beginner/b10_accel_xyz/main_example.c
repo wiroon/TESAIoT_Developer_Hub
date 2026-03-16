@@ -6,7 +6,7 @@
  * ipc_sensorhub_snapshot() and displays X, Y, Z with bar indicators.
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if BSP_HAS_BMI270
 

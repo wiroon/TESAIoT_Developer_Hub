@@ -4,7 +4,7 @@
  * Console-style auto-scrolling log showing all sensor events.
  * Green text on dark background, monospace-feel.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #define UPDATE_MS    200
 #define MAX_LOG_LEN  4000

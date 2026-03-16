@@ -8,7 +8,7 @@
  * Every PAUSE must have a matching RESUME — missing RESUME kills touch.
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 #include "ipc_communication.h"
 
 #define IPC_CMD_TOUCH_PAUSE    (0xD6)

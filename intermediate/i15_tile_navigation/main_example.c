@@ -4,7 +4,7 @@
  * Multi-page tile view with swipe navigation between 4 pages.
  * Each page shows different content (sensors, chart, status, about).
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #define UPDATE_MS  200
 

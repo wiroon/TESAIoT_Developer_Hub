@@ -6,7 +6,7 @@
  * Page A (blue) ↔ Page B (green) with navigation buttons.
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 /* ── State ───────────────────────────────────────────────────────── */
 static lv_obj_t *s_parent;      /* root parent passed to example_main */

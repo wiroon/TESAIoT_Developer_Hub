@@ -20,7 +20,7 @@
  * @author  TESAIoT
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 /* ── Layout ────────────────────────────────────────────────────────── */
 #define STICK_SIZE       180

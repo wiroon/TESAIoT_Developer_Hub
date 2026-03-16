@@ -7,7 +7,7 @@
  * AI Kit only (BSP_HAS_SHT40).
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if BSP_HAS_SHT40
 

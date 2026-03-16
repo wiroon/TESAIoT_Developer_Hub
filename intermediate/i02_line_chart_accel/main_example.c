@@ -4,7 +4,7 @@
  * Real-time scrolling line chart plotting BMI270 X/Y/Z acceleration.
  * 100-point history with color-coded series.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if !BSP_HAS_BMI270
 #error "This example requires BMI270"

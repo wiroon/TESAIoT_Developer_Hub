@@ -22,6 +22,6 @@
     "lv_obj_set_flex_flow"
   ],
   "estimated_loc": 150,
-  "source_reference": "example_common.h",
+  "source_reference": "pse84_common.h",
   "id": "a05_optiga_uid"
 }

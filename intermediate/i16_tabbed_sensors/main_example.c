@@ -4,7 +4,7 @@
  * Tab view where each tab shows one sensor's detailed data with
  * large readouts and auxiliary information.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #define UPDATE_MS  150
 

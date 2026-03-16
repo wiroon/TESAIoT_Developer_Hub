@@ -4,7 +4,7 @@
  * Rule engine UI: configure IF sensor > threshold THEN change indicator color.
  * Supports 4 configurable rules with real-time evaluation.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #include <math.h>
 

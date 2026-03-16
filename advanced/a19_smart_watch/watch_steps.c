@@ -6,7 +6,7 @@
  * Steps are simulated from IMU accelerometer magnitude spikes.
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 #include "watch_screens.h"
 
 /* Globals updated by main_example.c sensor timer */

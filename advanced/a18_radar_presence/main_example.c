@@ -10,7 +10,7 @@
  * @author   TESAIoT
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 #include "radar_task.h"
 
 /* ── Layout constants ───────────────────────────────────────────── */

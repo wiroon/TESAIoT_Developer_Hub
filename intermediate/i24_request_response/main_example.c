@@ -6,7 +6,7 @@
  * after configurable duration.  Shows round-trip time on screen.
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 #include "ipc_communication.h"
 
 #define IPC_CMD_QUERY_REQ   (0xB0)

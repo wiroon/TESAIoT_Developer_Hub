@@ -11,7 +11,7 @@
  * Violating this rule → permanent display freeze (2026-03-10 incident).
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 #include "ipc_communication.h"
 
 #define IPC_CMD_DEFERRED_REQ   (0xC5)

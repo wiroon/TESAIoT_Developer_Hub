@@ -5,7 +5,7 @@
  * expiration status, and chain validation visualization.
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -160,6 +160,12 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_text_color(title, UI_COLOR_TEXT, 0);
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_pos(title, 16, 10);
+
+    /* UI Reference banner */
+    lv_obj_t *ref_banner = lv_label_create(parent);
+    lv_label_set_text(ref_banner, LV_SYMBOL_WARNING " UI Reference — real cert parsing via IPC_CMD_HSM_READ_CERT (0xB7)");
+    lv_obj_set_style_text_color(ref_banner, lv_color_hex(0xFF9800), 0);
+    lv_obj_set_pos(ref_banner, 16, 36);
 
     /* ดูใบรับรองดิจิทัล */
     lv_obj_t *th_sub = lv_label_create(parent);

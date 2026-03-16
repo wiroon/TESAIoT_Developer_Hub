@@ -4,7 +4,7 @@
  * Detects motion from BMI270 accelerometer magnitude changes.
  * Shows alert status, motion count, and a scrollable event history log.
  */
-#include "example_common.h"
+#include "pse84_common.h"
 
 #if !BSP_HAS_BMI270
 #error "This example requires BMI270"

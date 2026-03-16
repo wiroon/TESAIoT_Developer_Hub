@@ -5,7 +5,7 @@
  * Time is derived from FreeRTOS tick count (uptime-based).
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 #include "watch_screens.h"
 
 /* Globals updated by main_example.c clock timer */

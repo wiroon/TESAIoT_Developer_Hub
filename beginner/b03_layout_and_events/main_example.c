@@ -10,7 +10,7 @@
  * Display: 480x800 AMOLED, LVGL 9.2
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 #include "pages.h"
 
 /* ── Menu item definition ───────────────────────────────────────────── */

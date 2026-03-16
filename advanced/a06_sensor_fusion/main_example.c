@@ -6,7 +6,7 @@
  * Shows roll/pitch/yaw, heading compass, and tilt visualization.
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 #include <string.h>
 #include <stdio.h>
 #include <math.h>

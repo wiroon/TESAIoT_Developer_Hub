@@ -19,7 +19,7 @@
  * @author  TESAIoT
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 #include "ipc_communication.h"
 
 /* ── IPC Commands ──────────────────────────────────────────────────── */

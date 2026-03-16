@@ -6,7 +6,7 @@
  * stores in volatile buffer.  LVGL timer updates display from buffer.
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 #include "ipc_communication.h"
 
 #define IPC_CMD_SENSOR_DATA   (0xA0)
