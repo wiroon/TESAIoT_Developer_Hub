@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Security Info Display — Real OPTIGA Trust M Chip Data
+ * @brief   Security Info Display - Real OPTIGA Trust M Chip Data
  *
  * @description
  *   Reads OPTIGA Trust M chip information via IPC_CMD_HSM_REQUEST
@@ -114,7 +114,7 @@ static void read_optiga_data(void)
 fallback:
     s_optiga_ok = false;
     snprintf(s_uid_hex, sizeof(s_uid_hex),
-             "IPC timeout — chip not responding");
+             "IPC timeout - chip not responding");
     snprintf(s_lcs_str, sizeof(s_lcs_str), "Unknown");
     for (int i = 0; i < 4; i++) {
         snprintf(s_cert_status[i], sizeof(s_cert_status[i]), "Unknown");
@@ -209,7 +209,7 @@ void example_main(lv_obj_t *parent)
 
     /* Title */
     lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, LV_SYMBOL_EYE_OPEN " Security Info — OPTIGA Trust M");
+    lv_label_set_text(title, LV_SYMBOL_EYE_OPEN " Security Info - OPTIGA Trust M");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
@@ -220,7 +220,7 @@ void example_main(lv_obj_t *parent)
     /* Data source indicator */
     lv_obj_t *src_lbl = lv_label_create(parent);
     lv_label_set_text(src_lbl, s_optiga_ok ? LV_SYMBOL_OK " Live IPC Data"
-                                           : LV_SYMBOL_WARNING " IPC Timeout — Fallback");
+                                           : LV_SYMBOL_WARNING " IPC Timeout - Fallback");
     lv_obj_set_style_text_color(src_lbl, s_optiga_ok ? COLOR_SUCCESS : COLOR_WARNING, 0);
     lv_obj_align(src_lbl, LV_ALIGN_TOP_RIGHT, -10, 8);
 
@@ -281,7 +281,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_pad_column(algo_card, 8, 0);
     lv_obj_set_style_pad_row(algo_card, 6, 0);
 
-    /* Re-add title since flex-row messes with it — title already added by helper */
+    /* Re-add title since flex-row messes with it - title already added by helper */
 
     for (int i = 0; i < NUM_ALGORITHMS; i++) {
         lv_obj_t *chip = lv_obj_create(algo_card);

@@ -1,12 +1,12 @@
 /**
  * @file    main_example.c
- * @brief   Face Database Manager — Enrollment list, add/delete, status display
+ * @brief   Face Database Manager - Enrollment list, add/delete, status display
  *
  * @description
  *   Face database management UI concept demo. Shows a scrollable user list
  *   with enrollment status indicators, add/delete controls, simulated
  *   enrollment progress bar, capacity gauge, and per-entry detail panel.
- *   Pure LVGL demo — no camera or face detection hardware required.
+ *   Pure LVGL demo - no camera or face detection hardware required.
  *
  * @board    AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  * @author   TESAIoT
@@ -164,7 +164,7 @@ static void update_detail(facedb_ctx_t *ctx)
 }
 
 /* ---------------------------------------------------------------------------
- * Row click — select user
+ * Row click - select user
  * --------------------------------------------------------------------------- */
 static void row_click_cb(lv_event_t *e)
 {
@@ -342,7 +342,7 @@ static void refresh_list(facedb_ctx_t *ctx)
         if (ctx->users[i].status == STATUS_EMPTY) {
             /* Empty slot */
             char slot_str[24];
-            snprintf(slot_str, sizeof(slot_str), "[Slot %d — empty]", i + 1);
+            snprintf(slot_str, sizeof(slot_str), "[Slot %d - empty]", i + 1);
             lv_label_set_text(ctx->row_name_lbls[i], slot_str);
             lv_obj_set_style_text_color(ctx->row_name_lbls[i],
                                          UI_COLOR_TEXT_DIM, 0);
@@ -419,7 +419,7 @@ void example_main(lv_obj_t *parent)
 
     /* UI Concept banner */
     lv_obj_t *concept = lv_label_create(parent);
-    lv_label_set_text(concept, LV_SYMBOL_WARNING " UI Concept — camera + face recognition not yet available");
+    lv_label_set_text(concept, LV_SYMBOL_WARNING " UI Concept - camera + face recognition not yet available");
     lv_obj_set_style_text_color(concept, lv_color_hex(0xFF9800), 0);
     lv_obj_align(concept, LV_ALIGN_TOP_RIGHT, -10, 8);
 

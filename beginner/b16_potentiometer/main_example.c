@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Potentiometer Gauge — Analog value via IPC sensorhub
+ * @brief   Potentiometer Gauge - Analog value via IPC sensorhub
  *
  * Reads potentiometer every 100ms using ipc_sensorhub_snapshot().
  * Displays as an arc gauge with percentage and raw value.

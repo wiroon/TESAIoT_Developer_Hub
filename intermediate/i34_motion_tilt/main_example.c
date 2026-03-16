@@ -94,7 +94,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_pad_all(ctx.area, 0, 0);
     lv_obj_clear_flag(ctx.area, LV_OBJ_FLAG_SCROLLABLE);
 
-    /* Crosshair — horizontal */
+    /* Crosshair - horizontal */
     lv_obj_t *ch = lv_obj_create(ctx.area);
     lv_obj_set_size(ch, AREA_SZ - 20, 1);
     lv_obj_set_pos(ch, 10, AREA_SZ / 2);
@@ -102,7 +102,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_bg_opa(ch, LV_OPA_40, 0);
     lv_obj_set_style_border_width(ch, 0, 0);
 
-    /* Crosshair — vertical */
+    /* Crosshair - vertical */
     lv_obj_t *cv = lv_obj_create(ctx.area);
     lv_obj_set_size(cv, 1, AREA_SZ - 20);
     lv_obj_set_pos(cv, AREA_SZ / 2, 10);

@@ -1,5 +1,5 @@
 /**
- * I17 — Chart Statistics
+ * I17 - Chart Statistics
  *
  * Shows min/max/avg statistics for BMI270 acceleration data with a
  * line chart and live statistical readouts.

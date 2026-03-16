@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Widget Basics — Interactive Grid Menu with 11 widget demos
+ * @brief   Widget Basics - Interactive Grid Menu with 11 widget demos
  *
  * A scrollable grid of styled cards (3 columns) serves as the Home screen.
  * Tapping a card navigates to the corresponding widget demo page.

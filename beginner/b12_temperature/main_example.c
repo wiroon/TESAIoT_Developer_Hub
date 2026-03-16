@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Temperature Gauge — DPS368 temperature via IPC sensorhub
+ * @brief   Temperature Gauge - DPS368 temperature via IPC sensorhub
  *
  * Reads DPS368 temperature every 500ms using ipc_sensorhub_snapshot().
  * Displays in an arc gauge with min/max tracking.

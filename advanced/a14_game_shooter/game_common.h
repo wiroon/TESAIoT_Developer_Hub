@@ -28,18 +28,23 @@
 #define GB_LIGHTEST  0x9BBC0F
 
 /*******************************************************************************
- * Unified Game Input State (touch-only)
+ * F310 Joystick Deadzone (left stick, 0-255 centered at 0x80)
+ *******************************************************************************/
+#define GAME_STICK_DEADZONE  40   /* +/- from center (0x80) */
+
+/*******************************************************************************
+ * Unified Game Input State (touch + F310 joystick)
  *
  * Games poll this struct every tick via game_input_read().
- * Touch overlay buttons set volatile flags on press/release.
+ * Touch overlay buttons + F310 DirectInput merged via OR.
  *******************************************************************************/
 typedef struct {
     bool up;
     bool down;
     bool left;
     bool right;
-    bool action;    /* A button — flap, confirm */
-    bool restart;   /* Restart button */
+    bool action;    /* A/B/X button - flap, confirm */
+    bool restart;   /* Y / Restart button */
 } game_input_state_t;
 
 /*******************************************************************************

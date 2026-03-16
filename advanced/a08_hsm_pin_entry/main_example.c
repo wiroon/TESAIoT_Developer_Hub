@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   HSM PIN Entry Overlay — production-quality numpad with OPTIGA reference
+ * @brief   HSM PIN Entry Overlay - production-quality numpad with OPTIGA reference
  *
  * @description
  *   Secure PIN entry overlay with full-screen numpad, shake animation on wrong
@@ -49,7 +49,7 @@
 #define COLOR_WARNING       lv_color_hex(0xFF9800)
 #define COLOR_LOCKED        lv_color_hex(0xB71C1C)
 
-/* ── FNV-1a hash (demo only — production uses OPTIGA SHA-256) ──────── */
+/* ── FNV-1a hash (demo only - production uses OPTIGA SHA-256) ──────── */
 static uint32_t fnv1a_hash(const char *data, size_t len)
 {
     uint32_t hash = 0x811C9DC5u;
@@ -190,7 +190,7 @@ static void lockout_tick_cb(lv_timer_t *timer)
 static void verify_pin(pin_ctx_t *ctx)
 {
     /*
-     * Production path (commented — requires CM33_NS OPTIGA handler):
+     * Production path (commented - requires CM33_NS OPTIGA handler):
      *   memset(&s_ipc_tx, 0, sizeof(s_ipc_tx));
      *   s_ipc_tx.cmd = IPC_CMD_OPTIGA_VERIFY_PIN;
      *   memcpy(s_ipc_tx.data, ctx->pin, PIN_LEN);

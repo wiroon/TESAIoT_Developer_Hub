@@ -1,5 +1,5 @@
 /**
- * I14 — Auto-Scrolling Console Log
+ * I14 - Auto-Scrolling Console Log
  *
  * Console-style auto-scrolling log showing all sensor events.
  * Green text on dark background, monospace-feel.

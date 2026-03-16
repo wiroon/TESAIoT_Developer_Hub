@@ -1,14 +1,14 @@
 /**
  * @file    main_example.c
- * @brief   Button-LED Link — Physical button press toggles real LED
+ * @brief   Button-LED Link - Physical button press toggles real LED
  *
  * Polls CYBSP_USER_BTN1 (SW1) at 100ms. Each press toggles
  * CYBSP_USER_LED1 on/off via Cy_GPIO_Inv(). LVGL indicators
  * reflect real hardware state.
  *
  * Hardware:
- *   SW1  (CYBSP_USER_BTN1)  — P7.0  (active LOW)
- *   LED1 (CYBSP_USER_LED1)  — P10.7 (active LOW)
+ *   SW1  (CYBSP_USER_BTN1)  - P7.0  (active LOW)
+ *   LED1 (CYBSP_USER_LED1)  - P10.7 (active LOW)
  *
  * @board  AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  */
@@ -44,7 +44,7 @@ static void poll_timer_cb(lv_timer_t *t)
         lv_obj_set_style_text_color(ctx.lbl_state, UI_COLOR_SUCCESS, 0);
     } else {
         lv_led_off(ctx.led_widget);
-        lv_label_set_text(ctx.lbl_state, "LED OFF — press SW1");
+        lv_label_set_text(ctx.lbl_state, "LED OFF - press SW1");
         lv_obj_set_style_text_color(ctx.lbl_state, UI_COLOR_TEXT_DIM, 0);
     }
 }
@@ -78,7 +78,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_align(ctx.led_widget, LV_ALIGN_CENTER, 0, -30);
 
     /* State label */
-    ctx.lbl_state = example_label_create(parent, "LED OFF — press SW1",
+    ctx.lbl_state = example_label_create(parent, "LED OFF - press SW1",
                                           &lv_font_montserrat_16, UI_COLOR_TEXT_DIM);
     lv_obj_align(ctx.lbl_state, LV_ALIGN_CENTER, 0, 60);
 

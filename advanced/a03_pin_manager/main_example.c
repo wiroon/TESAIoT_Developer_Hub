@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   PIN Manager — Real OPTIGA Trust M PIN storage via IPC
+ * @brief   PIN Manager - Real OPTIGA Trust M PIN storage via IPC
  *
  * 4-digit PIN entry pad with OPTIGA-backed secure storage.
  * PIN is hashed with SHA-256 by CM33_NS and stored in OPTIGA DATA_3
@@ -285,7 +285,7 @@ static void process_pin(app_ctx_t *ctx)
 
             if (ctx->attempts >= MAX_ATTEMPTS) {
                 ctx->state = STATE_LOCKED;
-                set_status(ctx, "LOCKED — Too many failed attempts", UI_COLOR_ERROR);
+                set_status(ctx, "LOCKED - Too many failed attempts", UI_COLOR_ERROR);
                 ctx->lockout_remaining = LOCKOUT_SEC;
                 ctx->lockout_timer = lv_timer_create(lockout_timer_cb, 1000, ctx);
                 for (int i = 0; i < 12; i++) {
@@ -443,7 +443,7 @@ void example_main(lv_obj_t *parent)
     lv_label_set_long_mode(ctx->lockout_label, LV_LABEL_LONG_WRAP);
     lv_label_set_text(ctx->lockout_label, "");
 
-    /* Hash display — indicates real vs fallback */
+    /* Hash display - indicates real vs fallback */
     lv_obj_t *hdr = lv_label_create(left);
     lv_label_set_text(hdr, "OPTIGA SHA-256 via IPC (0xB9/0xBA)");
     lv_obj_set_style_text_color(hdr, lv_color_hex(0x455a64), 0);

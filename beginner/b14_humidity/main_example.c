@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Humidity Gauge — SHT40 humidity via IPC sensorhub
+ * @brief   Humidity Gauge - SHT40 humidity via IPC sensorhub
  *
  * Reads SHT40 humidity every 1s using ipc_sensorhub_snapshot().
  * Displays in an arc gauge with comfort level indicator.

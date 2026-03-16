@@ -37,7 +37,7 @@ lv_obj_t *watch_clock_create(lv_obj_t *parent)
 
     /* Date display */
     g_clock_date_label = lv_label_create(cont);
-    lv_label_set_text(g_clock_date_label, "--- — Day 0");
+    lv_label_set_text(g_clock_date_label, "--- - Day 0");
     lv_obj_set_style_text_font(g_clock_date_label, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(g_clock_date_label, UI_COLOR_TEXT_DIM, 0);
 

@@ -1,5 +1,5 @@
 /**
- * I18 — Color Mixer
+ * I18 - Color Mixer
  *
  * Three sliders (R, G, B) that mix a color displayed in a large preview box.
  * Shows hex code and individual channel values.

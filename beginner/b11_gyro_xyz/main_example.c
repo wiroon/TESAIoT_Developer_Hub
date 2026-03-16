@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Gyroscope XYZ — BMI270 gyro with arc gauge visualization
+ * @brief   Gyroscope XYZ - BMI270 gyro with arc gauge visualization
  *
  * Reads BMI270 gyroscope data at 100ms intervals using
  * ipc_sensorhub_snapshot(). Displays angular velocity (dps)

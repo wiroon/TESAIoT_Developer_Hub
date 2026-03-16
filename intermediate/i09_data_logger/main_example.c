@@ -1,5 +1,5 @@
 /**
- * I09 — Data Logger
+ * I09 - Data Logger
  *
  * Logs sensor readings with timestamp into a scrollable list.
  * Configurable sample rate and up to 200 entries before oldest are removed.

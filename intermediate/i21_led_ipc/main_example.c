@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   LED Control via IPC — CM55 button → IPC_CMD_GPIO_LED → CM33 toggles LED
+ * @brief   LED Control via IPC - CM55 button → IPC_CMD_GPIO_LED → CM33 toggles LED
  *
  * CM55 sends 0x80 command with data[0]=1 (ON) or data[0]=0 (OFF).
  * On-screen LED widget mirrors the physical LED state.
@@ -60,7 +60,7 @@ void example_main(lv_obj_t *parent)
     s_led_on = false;
 
     lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I19 — LED Control via IPC");
+    lv_label_set_text(title, "I19 - LED Control via IPC");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);

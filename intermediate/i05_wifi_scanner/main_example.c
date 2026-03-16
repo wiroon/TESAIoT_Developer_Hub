@@ -1,5 +1,5 @@
 /**
- * I05 — WiFi Scanner
+ * I05 - WiFi Scanner
  *
  * Scans for nearby WiFi networks and displays SSID, RSSI signal bar,
  * channel, and security type in a scrollable list.
@@ -130,7 +130,7 @@ static void timer_cb(lv_timer_t *t)
         if (wifi_manager_scan_ready()) {
             ctx->scanning = false;
             populate_list(ctx);
-            lv_label_set_text(ctx->lbl_status, "Scan complete — tap Scan to refresh");
+            lv_label_set_text(ctx->lbl_status, "Scan complete - tap Scan to refresh");
         }
     }
 }

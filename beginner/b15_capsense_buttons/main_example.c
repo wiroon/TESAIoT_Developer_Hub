@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   CapSense Buttons — Touch buttons and slider via IPC sensorhub
+ * @brief   CapSense Buttons - Touch buttons and slider via IPC sensorhub
  *
  * Reads CapSense touch buttons and slider position every 50ms
  * using ipc_sensorhub_snapshot(). Eva Kit only (BSP_HAS_CAPSENSE).

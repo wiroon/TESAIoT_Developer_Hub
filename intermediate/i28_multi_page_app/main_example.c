@@ -1,9 +1,9 @@
 /**
- * i26_multi_page_app — Production Page Navigation Pattern
+ * i26_multi_page_app - Production Page Navigation Pattern
  *
  * Demonstrates a self-contained page manager with navigation stack,
  * bottom tab bar, and three pages: Home, Sensors, Settings.
- * No dependency on production page_manager.h — everything is local.
+ * No dependency on production page_manager.h - everything is local.
  *
  * Board:  PSoC Edge E84 (AI Kit / Eva Kit)
  * Core:   CM55 (display + UI)

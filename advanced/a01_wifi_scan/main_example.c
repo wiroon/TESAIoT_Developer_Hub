@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   WiFi Scanner — Non-blocking scan with LVGL table display
+ * @brief   WiFi Scanner - Non-blocking scan with LVGL table display
  *
  * @description
  *   Scan WiFi access points using wifi_manager non-blocking API and display

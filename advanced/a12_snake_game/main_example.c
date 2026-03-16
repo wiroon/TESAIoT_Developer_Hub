@@ -1,5 +1,5 @@
 /*******************************************************************************
- * A10 — Snake Game (Touch D-pad Control)
+ * A10 - Snake Game (Touch D-pad Control)
  *
  * Production-derived Snake game for Developer Hub.
  * Adapted from page_game_snake.c (TESAIoT Game Console).
@@ -16,6 +16,7 @@
 
 #include "pse84_common.h"
 #include "game_common.h"
+#include "usb_hid_joystick.h"
 
 /*******************************************************************************
  * Game Constants
@@ -301,7 +302,7 @@ static void snake_start(void)
 }
 
 /*******************************************************************************
- * Input Handling (touch D-pad — edge-triggered)
+ * Input Handling (touch D-pad - edge-triggered)
  *******************************************************************************/
 static void snake_process_input(void)
 {
@@ -331,7 +332,7 @@ static void snake_process_input(void)
 }
 
 /*******************************************************************************
- * Timer Callback (115ms — game logic tick)
+ * Timer Callback (115ms - game logic tick)
  *******************************************************************************/
 static void snake_tick_cb(lv_timer_t *timer)
 {
@@ -355,6 +356,9 @@ void example_main(lv_obj_t *parent)
     memset(&s_snake, 0, sizeof(s_snake));
     s_snake_best = saved_best;
     s_snake.parent = parent;
+
+    /* Request USB HID joystick init (F310 support) */
+    usb_hid_joystick_request_init();
 
     /* Dark background on parent */
     lv_obj_set_style_bg_color(parent, lv_color_hex(0x0A1628), 0);

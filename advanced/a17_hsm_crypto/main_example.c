@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   HSM Crypto Benchmark — Real OPTIGA via IPC_CMD_HSM_BENCHMARK
+ * @brief   HSM Crypto Benchmark - Real OPTIGA via IPC_CMD_HSM_BENCHMARK
  *
  * @description
  *   Runs 5 real crypto benchmarks on OPTIGA Trust M via IPC_CMD_HSM_BENCHMARK
@@ -71,7 +71,7 @@ static bool run_real_benchmark(void)
     }
     if (st != CY_IPC_PIPE_SUCCESS) return false;
 
-    /* Benchmark takes longer — wait up to 30s */
+    /* Benchmark takes longer - wait up to 30s */
     uint32_t elapsed = 0;
     while (s_bench_resp.ready != 1 && elapsed < 30000) {
         Cy_SysLib_DelayUs(1000);
@@ -145,7 +145,7 @@ static void bench_show_result(int idx, uint16_t actual_ms)
 }
 
 /*******************************************************************************
- * "Run All" — sends single IPC, shows all 5 real timings
+ * "Run All" - sends single IPC, shows all 5 real timings
  *******************************************************************************/
 static void run_all_cb(lv_event_t *e)
 {
@@ -187,7 +187,7 @@ static void run_all_cb(lv_event_t *e)
 
     lv_label_set_text(s_bench.status_label,
         s_bench_ipc_ok ? LV_SYMBOL_OK " Benchmark complete (real OPTIGA timings)"
-                       : LV_SYMBOL_WARNING " IPC timeout — showing datasheet estimates");
+                       : LV_SYMBOL_WARNING " IPC timeout - showing datasheet estimates");
     lv_obj_set_style_text_color(s_bench.status_label,
         lv_color_hex(s_bench_ipc_ok ? HSM_COLOR_OK : HSM_COLOR_WARN), 0);
 
@@ -195,7 +195,7 @@ static void run_all_cb(lv_event_t *e)
 }
 
 /*******************************************************************************
- * Single "Run" button — re-runs full benchmark, shows one result
+ * Single "Run" button - re-runs full benchmark, shows one result
  *******************************************************************************/
 static void single_run_cb(lv_event_t *e)
 {

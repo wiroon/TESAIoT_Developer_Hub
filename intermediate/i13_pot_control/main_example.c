@@ -1,5 +1,5 @@
 /**
- * I13 — Potentiometer Control
+ * I13 - Potentiometer Control
  *
  * Potentiometer simultaneously controlling an arc gauge, bar indicator,
  * and numeric label. Eva Kit only (requires BSP_HAS_POTENTIOMETER).

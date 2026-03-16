@@ -1,5 +1,5 @@
 /**
- * I20 — Automation Rules
+ * I20 - Automation Rules
  *
  * Rule engine UI: configure IF sensor > threshold THEN change indicator color.
  * Supports 4 configurable rules with real-time evaluation.
@@ -239,7 +239,7 @@ void example_main(lv_obj_t *parent)
                                           &lv_font_montserrat_16,
                                           UI_COLOR_TEXT_DIM);
 
-    /* Rule cards — 2x2 grid */
+    /* Rule cards - 2x2 grid */
     lv_obj_t *grid = lv_obj_create(parent);
     lv_obj_set_size(grid, 770, 260);
     lv_obj_set_flex_flow(grid, LV_FLEX_FLOW_ROW_WRAP);

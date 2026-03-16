@@ -1,5 +1,5 @@
 /*******************************************************************************
- * A09 — Flappy Bird (Touch Control)
+ * A09 - Flappy Bird (Touch Control)
  *
  * Production-derived Flappy Bird game for Developer Hub.
  * Adapted from page_game_flappy.c (TESAIoT Game Console).
@@ -15,6 +15,7 @@
 
 #include "pse84_common.h"
 #include "game_common.h"
+#include "usb_hid_joystick.h"
 
 /*******************************************************************************
  * Game Constants
@@ -73,7 +74,7 @@ static void flappy_start(void);
 static void flappy_step(void);
 
 /*******************************************************************************
- * Arena tap callback — tap anywhere on arena to flap
+ * Arena tap callback - tap anywhere on arena to flap
  *******************************************************************************/
 static void arena_tap_cb(lv_event_t *e)
 {
@@ -262,16 +263,19 @@ static void flappy_start(void)
 static void flappy_process_input(void)
 {
     game_input_state_t input;
-    bool action_edge;
+    bool flap_edge;
 
     game_input_read(&input);
 
-    action_edge = input.action && !s_flap.prev_input.action;
+    /* Flap on: A/B/X button OR D-pad Up OR stick Up (edge-triggered) */
+    flap_edge = (input.action && !s_flap.prev_input.action) ||
+                (input.up && !s_flap.prev_input.up);
 
+    /* Restart on: Y button (edge-triggered), or flap when not running */
     if ((input.restart && !s_flap.prev_input.restart) ||
-        (!s_flap.running && action_edge)) {
+        (!s_flap.running && flap_edge)) {
         flappy_start();
-    } else if (action_edge) {
+    } else if (flap_edge) {
         flappy_flap();
     }
 
@@ -300,6 +304,9 @@ void example_main(lv_obj_t *parent)
     memset(&s_flap, 0, sizeof(s_flap));
     s_flap_best = saved_best;
     s_flap.parent = parent;
+
+    /* Request USB HID joystick init (F310 support) */
+    usb_hid_joystick_request_init();
 
     /* Dark background on parent */
     lv_obj_set_style_bg_color(parent, lv_color_hex(0x0A1628), 0);

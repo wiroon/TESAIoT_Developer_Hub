@@ -10,6 +10,7 @@
  *******************************************************************************/
 
 #include "game_common.h"
+#include "usb_hid_joystick.h"
 #include <string.h>
 
 /*******************************************************************************
@@ -37,10 +38,11 @@ void game_touch_clear(void) { s_touch_flags = 0; }
 #define CTRL_RST_SZ    48     /* Restart button */
 
 /*******************************************************************************
- * Input: Touch flags -> game_input_state_t
+ * Input: F310 DirectInput + Touch flags -> game_input_state_t
  *******************************************************************************/
 void game_input_read(game_input_state_t *state)
 {
+    const joystick_state_t *js;
     uint8_t tf;
 
     if (state == NULL) {
@@ -49,6 +51,39 @@ void game_input_read(game_input_state_t *state)
 
     memset(state, 0, sizeof(*state));
 
+    /* F310 joystick (if connected) */
+    js = usb_hid_joystick_get_state();
+    if (js != NULL && js->connected) {
+        /* D-pad from hat switch */
+        uint8_t hat = js->report.buttons1 & F310_HAT_MASK;
+        if (hat == F310_HAT_UP || hat == F310_HAT_UP_LEFT || hat == F310_HAT_UP_RIGHT)
+            state->up = true;
+        if (hat == F310_HAT_DOWN || hat == F310_HAT_DOWN_LEFT || hat == F310_HAT_DOWN_RIGHT)
+            state->down = true;
+        if (hat == F310_HAT_LEFT || hat == F310_HAT_UP_LEFT || hat == F310_HAT_DOWN_LEFT)
+            state->left = true;
+        if (hat == F310_HAT_RIGHT || hat == F310_HAT_UP_RIGHT || hat == F310_HAT_DOWN_RIGHT)
+            state->right = true;
+
+        /* Left stick with deadzone */
+        int16_t sx = (int16_t)js->report.left_x - 0x80;
+        int16_t sy = (int16_t)js->report.left_y - 0x80;
+        if (sx < -GAME_STICK_DEADZONE)  state->left  = true;
+        if (sx >  GAME_STICK_DEADZONE)  state->right = true;
+        if (sy < -GAME_STICK_DEADZONE)  state->up    = true;
+        if (sy >  GAME_STICK_DEADZONE)  state->down  = true;
+
+        /* Face buttons: A/B/X = action, Y = restart */
+        if (js->report.buttons1 & F310_BTN_A)  state->action  = true;
+        if (js->report.buttons1 & F310_BTN_B)  state->action  = true;
+        if (js->report.buttons1 & F310_BTN_X)  state->action  = true;
+        if (js->report.buttons1 & F310_BTN_Y)  state->restart = true;
+
+        /* Shoulder: RB = action */
+        if (js->report.buttons2 & F310_BTN_RB) state->action  = true;
+    }
+
+    /* Merge touch overlay flags (OR with F310) */
     tf = s_touch_flags;
     if (tf & TOUCH_UP)      state->up      = true;
     if (tf & TOUCH_DOWN)    state->down    = true;

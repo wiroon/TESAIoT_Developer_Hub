@@ -1,5 +1,5 @@
 /*******************************************************************************
- * A12 — Space Shooter (Touch Control)
+ * A12 - Space Shooter (Touch Control)
  *
  * Production-derived Space Shooter game for Developer Hub.
  * Adapted from page_game_shooter.c (TESAIoT Game Console, 467 lines).
@@ -19,6 +19,7 @@
 
 #include "pse84_common.h"
 #include "game_common.h"
+#include "usb_hid_joystick.h"
 
 /*******************************************************************************
  * Game Constants
@@ -237,7 +238,7 @@ static void shooter_step(void)
                        (int32_t)s_shooter.enemies[i].x,
                        (int32_t)s_shooter.enemies[i].y);
 
-        /* Enemy passed bottom — lose a life */
+        /* Enemy passed bottom - lose a life */
         if (s_shooter.enemies[i].y > (float)SHOOT_ARENA_H) {
             shooter_reset_enemy(i);
             s_shooter.lives--;
@@ -336,6 +337,9 @@ void example_main(lv_obj_t *parent)
     s_shooter_best = saved_best;
     s_shooter.parent = parent;
 
+    /* Request USB HID joystick init (F310 support) */
+    usb_hid_joystick_request_init();
+
     /* Dark background on parent */
     lv_obj_set_style_bg_color(parent, lv_color_hex(0x0A1628), 0);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, 0);
@@ -363,7 +367,7 @@ void example_main(lv_obj_t *parent)
                                 &lv_font_montserrat_14, 0);
     lv_obj_set_pos(s_shooter.score_label, 16, 36);
 
-    /* Arena — Game Boy palette background */
+    /* Arena - Game Boy palette background */
     arena = lv_obj_create(parent);
     lv_obj_set_size(arena, SHOOT_ARENA_W, SHOOT_ARENA_H);
     lv_obj_align(arena, LV_ALIGN_CENTER, 0, 20);

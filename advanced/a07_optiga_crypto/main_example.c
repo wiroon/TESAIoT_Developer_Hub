@@ -5,7 +5,7 @@
  * @description
  *   Educational display of cryptographic concepts: ECC, SHA-256, AES, RNG.
  *   Animated progress bars simulate processing steps. Uses lv_timer_create()
- *   for animation — no OPTIGA or IPC calls needed.
+ *   for animation - no OPTIGA or IPC calls needed.
  *
  * @board    AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  * @author   TESAIoT
@@ -185,7 +185,7 @@ void example_main(lv_obj_t *parent)
 
     /* UI Reference banner */
     lv_obj_t *ref_banner = lv_label_create(parent);
-    lv_label_set_text(ref_banner, LV_SYMBOL_WARNING " UI Reference — real benchmarks in a17_hsm_crypto");
+    lv_label_set_text(ref_banner, LV_SYMBOL_WARNING " UI Reference - real benchmarks in a17_hsm_crypto");
     lv_obj_set_style_text_color(ref_banner, lv_color_hex(0xFF9800), 0);
     lv_obj_align(ref_banner, LV_ALIGN_TOP_RIGHT, -10, 8);
 
@@ -273,7 +273,7 @@ void example_main(lv_obj_t *parent)
 
     /* Info note at bottom */
     lv_obj_t *note = lv_label_create(parent);
-    lv_label_set_text(note, "Visualization only — actual OPTIGA Trust M operations require I2C bus access");
+    lv_label_set_text(note, "Visualization only - actual OPTIGA Trust M operations require I2C bus access");
     lv_obj_set_style_text_color(note, COLOR_PENDING, 0);
     lv_obj_align(note, LV_ALIGN_BOTTOM_MID, 0, -6);
 }

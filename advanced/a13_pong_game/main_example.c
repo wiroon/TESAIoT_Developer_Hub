@@ -1,5 +1,5 @@
 /*******************************************************************************
- * A11 — Pong Game (Touch Control)
+ * A11 - Pong Game (Touch Control)
  *
  * Production-derived Pong game for Developer Hub.
  * Adapted from page_game_pong.c (TESAIoT Game Console).
@@ -16,6 +16,7 @@
 
 #include "pse84_common.h"
 #include "game_common.h"
+#include "usb_hid_joystick.h"
 
 /*******************************************************************************
  * Game Constants
@@ -166,7 +167,7 @@ static void pong_step(void)
         s_pong.ball_vy = -s_pong.ball_vy;
     }
 
-    /* Left paddle collision — deflection angle based on hit position */
+    /* Left paddle collision - deflection angle based on hit position */
     if (pong_overlap(s_pong.ball_x, s_pong.ball_y,
                      PONG_BALL_SIZE, PONG_BALL_SIZE,
                      14.0f, s_pong.left_y,
@@ -219,7 +220,7 @@ static void pong_step(void)
         pong_reset_ball(false);
     }
 
-    /* AI opponent (right paddle) — tracks ball at 3.2px/frame */
+    /* AI opponent (right paddle) - tracks ball at 3.2px/frame */
     ball_center_y = s_pong.ball_y + (float)PONG_BALL_SIZE * 0.5f;
     if (ball_center_y > (s_pong.right_y + (float)PONG_PADDLE_H * 0.5f + 5.0f)) {
         s_pong.right_y += 3.2f;
@@ -232,7 +233,7 @@ static void pong_step(void)
 }
 
 /*******************************************************************************
- * Input Handling (touch Up/Down — continuous hold)
+ * Input Handling (touch Up/Down - continuous hold)
  *******************************************************************************/
 static void pong_process_input(void)
 {
@@ -282,6 +283,9 @@ void example_main(lv_obj_t *parent)
     memset(&s_pong, 0, sizeof(s_pong));
     s_pong_best = saved_best;
     s_pong.parent = parent;
+
+    /* Request USB HID joystick init (F310 support) */
+    usb_hid_joystick_request_init();
 
     /* Dark background on parent */
     lv_obj_set_style_bg_color(parent, lv_color_hex(0x0A1628), 0);

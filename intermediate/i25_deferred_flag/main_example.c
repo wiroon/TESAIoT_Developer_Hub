@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Deferred Flag Pattern — CRITICAL: avoid IPC pipe deadlock
+ * @brief   Deferred Flag Pattern - CRITICAL: avoid IPC pipe deadlock
  *
  * RULE: NEVER call Cy_IPC_Pipe_SendMessage() inside RegisterCallback.
  *
@@ -30,7 +30,7 @@ static lv_obj_t *s_lbl_tx;
 static lv_obj_t *s_lbl_log;
 
 /*
- * ── ISR CALLBACK — runs in interrupt context ────────────────────
+ * ── ISR CALLBACK - runs in interrupt context ────────────────────
  *
  * DO NOT call Cy_IPC_Pipe_SendMessage here!
  * Only set flags and store data.
@@ -49,7 +49,7 @@ static void ipc_isr_handler(uint32_t *msg_ptr)
 }
 
 /*
- * ── LVGL TIMER — runs in GFX task context ──────────────────────
+ * ── LVGL TIMER - runs in GFX task context ──────────────────────
  *
  * Safe to call Cy_IPC_Pipe_SendMessage here.
  */
@@ -60,7 +60,7 @@ static void deferred_poll_cb(lv_timer_t *timer)
     if (s_need_reply) {
         s_need_reply = false;
 
-        /* Now safe to send — we are in task context, pipe is free */
+        /* Now safe to send - we are in task context, pipe is free */
         s_tx_msg.cmd     = IPC_CMD_DEFERRED_RSP;
         s_tx_msg.data[0] = s_reply_data;
 
@@ -92,7 +92,7 @@ static void deferred_poll_cb(lv_timer_t *timer)
 void example_main(lv_obj_t *parent)
 {
     lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I21 — Deferred Flag Pattern (CRITICAL)");
+    lv_label_set_text(title, "I21 - Deferred Flag Pattern (CRITICAL)");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_RED), 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);

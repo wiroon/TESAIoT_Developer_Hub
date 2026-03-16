@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Rich Text LCD Console — terminal-style logging on LVGL display
+ * @brief   Rich Text LCD Console - terminal-style logging on LVGL display
  *
  * @description
  *   Terminal emulator on the AMOLED display with color-coded log levels,
@@ -9,10 +9,10 @@
  *   project as a visual debug output.
  *
  *   Log levels and colors:
- *     [I] INFO   — green   (0x4CAF50)
- *     [W] WARN   — orange  (0xFF9800)
- *     [E] ERROR  — red     (0xF44336)
- *     [D] DEBUG  — gray    (0x808080)
+ *     [I] INFO   - green   (0x4CAF50)
+ *     [W] WARN   - orange  (0xFF9800)
+ *     [E] ERROR  - red     (0xF44336)
+ *     [D] DEBUG  - gray    (0x808080)
  *
  * @board   AI Kit, Eva Kit, Game Console (all boards)
  * @author  TESAIoT

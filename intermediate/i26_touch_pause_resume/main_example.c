@@ -1,11 +1,11 @@
 /**
  * @file    main_example.c
- * @brief   Touch Pause/Resume IPC — Shared I2C bus access pattern
+ * @brief   Touch Pause/Resume IPC - Shared I2C bus access pattern
  *
  * IPC_CMD_TOUCH_PAUSE (0xD6): CM33 requests CM55 to stop touch polling
  * IPC_CMD_TOUCH_RESUME (0xD7): CM33 signals CM55 to reinit touch driver
  *
- * Every PAUSE must have a matching RESUME — missing RESUME kills touch.
+ * Every PAUSE must have a matching RESUME - missing RESUME kills touch.
  */
 
 #include "pse84_common.h"
@@ -88,7 +88,7 @@ void example_main(lv_obj_t *parent)
     s_paused = false;
 
     lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I22 — Touch Pause/Resume (I2C Sharing)");
+    lv_label_set_text(title, "I22 - Touch Pause/Resume (I2C Sharing)");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);

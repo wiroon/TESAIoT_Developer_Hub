@@ -1,5 +1,5 @@
 /**
- * I19 — WiFi Status Bar
+ * I19 - WiFi Status Bar
  *
  * Top status bar showing WiFi state, NTP time, and sensor activity
  * indicators. Below is a main content area with sensor summary.
@@ -52,7 +52,7 @@ static void timer_cb(lv_timer_t *t)
     ipc_sensorhub_get_time_str(time_buf, sizeof(time_buf));
     lv_label_set_text(ctx->lbl_time, time_buf);
 
-    /* Sensor activity — blink dots */
+    /* Sensor activity - blink dots */
     sensorhub_snapshot_t snap;
     ipc_sensorhub_snapshot(&snap);
 

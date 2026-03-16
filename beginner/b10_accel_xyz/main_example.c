@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Accelerometer XYZ — BMI270 live accel via IPC sensorhub
+ * @brief   Accelerometer XYZ - BMI270 live accel via IPC sensorhub
  *
  * Reads BMI270 accelerometer data at 100ms intervals using
  * ipc_sensorhub_snapshot() and displays X, Y, Z with bar indicators.

@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   WiFi Connect via IPC — CM55 sends commands to CM33_NS
+ * @brief   WiFi Connect via IPC - CM55 sends commands to CM33_NS
  *
  * @description
  *   Demonstrates the cross-core WiFi connection flow: CM55 builds IPC messages
@@ -10,10 +10,10 @@
  *   pattern (ISR sets flag, LVGL timer reads it).
  *
  *   IPC Command Reference:
- *     0xD0  IPC_CMD_WIFI_SCAN       — trigger AP scan on CM33_NS
- *     0xD1  IPC_CMD_WIFI_CONNECT    — connect (SSID + password in payload)
- *     0xD2  IPC_CMD_WIFI_DISCONNECT — disconnect current AP
- *     0xD9  IPC_CMD_WIFI_STATE_PUSH — CM33 pushes state to CM55
+ *     0xD0  IPC_CMD_WIFI_SCAN       - trigger AP scan on CM33_NS
+ *     0xD1  IPC_CMD_WIFI_CONNECT    - connect (SSID + password in payload)
+ *     0xD2  IPC_CMD_WIFI_DISCONNECT - disconnect current AP
+ *     0xD9  IPC_CMD_WIFI_STATE_PUSH - CM33 pushes state to CM55
  *
  * @board   AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  * @author  TESAIoT
@@ -80,7 +80,7 @@ static lv_obj_t *s_kb;
 
 static wifi_state_t s_displayed_state;
 
-/* ── IPC callback — ISR context, deferred flag only ────────────────── */
+/* ── IPC callback - ISR context, deferred flag only ────────────────── */
 static void wifi_state_ipc_cb(uint32_t *msg_ptr)
 {
     ipc_msg_t *msg = (ipc_msg_t *)msg_ptr;
@@ -108,8 +108,8 @@ static bool send_ipc_cmd(uint8_t cmd, const uint8_t *payload, uint8_t len)
     }
 
     cy_en_ipc_pipe_status_t st =
-        Cy_IPC_Pipe_SendMessage(CY_IPC_EP_CYPIPE_CM33_ADDR,
-                                CY_IPC_EP_CYPIPE_CM55_ADDR,
+        Cy_IPC_Pipe_SendMessage(CM33_IPC_PIPE_EP_ADDR,
+                                CM55_IPC_PIPE_EP_ADDR,
                                 (uint32_t *)&s_tx_msg, NULL);
     return (st == CY_IPC_PIPE_SUCCESS);
 }
@@ -141,7 +141,7 @@ static void send_wifi_connect(void)
     s_state_updated = true;
 }
 
-/* ── UI state update (runs in LVGL timer — task context) ───────────── */
+/* ── UI state update (runs in LVGL timer - task context) ───────────── */
 static void update_ui_state(void)
 {
     lv_color_t ind_color;
@@ -377,7 +377,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_add_flag(s_kb, LV_OBJ_FLAG_HIDDEN);
 
     /* ── Register IPC callback + start deferred poll timer ─────────── */
-    Cy_IPC_Pipe_RegisterCallback(CY_IPC_EP_CYPIPE_CM55_ADDR,
+    Cy_IPC_Pipe_RegisterCallback(CM55_IPC_PIPE_EP_ADDR,
                                   wifi_state_ipc_cb,
                                   IPC_CMD_WIFI_STATE_PUSH);
     lv_timer_create(wifi_poll_timer_cb, 50, NULL);

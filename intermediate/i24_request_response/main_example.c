@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   IPC Request-Response — Synchronous query with timeout
+ * @brief   IPC Request-Response - Synchronous query with timeout
  *
  * Sends request via IPC, polls volatile flag for response, times out
  * after configurable duration.  Shows round-trip time on screen.
@@ -23,7 +23,7 @@ static lv_obj_t *s_lbl_result;
 static lv_obj_t *s_lbl_time;
 static lv_obj_t *s_lbl_status;
 
-/* ── Response callback — ISR context ─────────────────────────────── */
+/* ── Response callback - ISR context ─────────────────────────────── */
 static void response_cb(uint32_t *msg_ptr)
 {
     ipc_msg_t *msg = (ipc_msg_t *)msg_ptr;
@@ -59,7 +59,7 @@ static bool send_request_blocking(uint8_t query_id, uint8_t *out_value)
     return true;
 }
 
-/* ── Button event — trigger request ──────────────────────────────── */
+/* ── Button event - trigger request ──────────────────────────────── */
 static void btn_query_cb(lv_event_t *e)
 {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
@@ -92,7 +92,7 @@ static void btn_query_cb(lv_event_t *e)
 void example_main(lv_obj_t *parent)
 {
     lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I20 — IPC Request-Response");
+    lv_label_set_text(title, "I20 - IPC Request-Response");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);

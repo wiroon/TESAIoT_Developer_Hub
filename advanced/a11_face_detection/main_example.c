@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Face Detection Concept UI — Bounding box visualization demo
+ * @brief   Face Detection Concept UI - Bounding box visualization demo
  *
  * @description
  *   Face detection concept UI with simulated bounding box visualization,
@@ -217,7 +217,7 @@ void example_main(lv_obj_t *parent)
 
     /* UI Concept banner */
     lv_obj_t *concept = lv_label_create(parent);
-    lv_label_set_text(concept, LV_SYMBOL_WARNING " UI Concept — camera + ML not yet available via IPC");
+    lv_label_set_text(concept, LV_SYMBOL_WARNING " UI Concept - camera + ML not yet available via IPC");
     lv_obj_set_style_text_color(concept, lv_color_hex(0xFF9800), 0);
     lv_obj_align(concept, LV_ALIGN_TOP_RIGHT, -10, 8);
 

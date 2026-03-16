@@ -1,5 +1,5 @@
 /**
- * I12 — CapSense Visualization
+ * I12 - CapSense Visualization
  *
  * Visualizes CapSense button presses and slider position with animated
  * feedback. Eva Kit only (requires BSP_HAS_CAPSENSE).

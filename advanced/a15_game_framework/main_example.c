@@ -1,5 +1,5 @@
 /*******************************************************************************
- * A13 — Game Common Framework Demo
+ * A13 - Game Common Framework Demo
  *
  * Standalone demonstration of game_common infrastructure building blocks.
  * Shows all game framework features in one screen:

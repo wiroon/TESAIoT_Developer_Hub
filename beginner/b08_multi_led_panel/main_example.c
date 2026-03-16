@@ -1,14 +1,14 @@
 /**
  * @file    main_example.c
- * @brief   Multi LED Panel — Grid of 3 real LEDs with switch controls
+ * @brief   Multi LED Panel - Grid of 3 real LEDs with switch controls
  *
  * Three switches control real hardware LEDs via Cy_GPIO_Set/Clr().
  * LVGL LED widgets mirror the actual GPIO state.
  *
  * Hardware:
- *   LED1 (CYBSP_USER_LED1)       — P10.7 (active LOW)
- *   LED2 (CYBSP_USER_LED2)       — P10.5 (active LOW)
- *   RGB Red (CYBSP_LED_RGB_RED)  — P20.6 (active LOW)
+ *   LED1 (CYBSP_USER_LED1)       - P10.7 (active LOW)
+ *   LED2 (CYBSP_USER_LED2)       - P10.5 (active LOW)
+ *   RGB Red (CYBSP_LED_RGB_RED)  - P20.6 (active LOW)
  *
  * @board  AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  */

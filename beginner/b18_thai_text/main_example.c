@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Thai Text Display — Noto Sans Thai font rendering demo
+ * @brief   Thai Text Display - Noto Sans Thai font rendering demo
  *
  * Shows all 4 Thai font sizes (14, 16, 20, 28) with complex Thai text.
  * Uses thai_label() helper for clean, readable Thai strings.

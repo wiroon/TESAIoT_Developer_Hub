@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Page Navigation — Forward/back between two pages
+ * @brief   Page Navigation - Forward/back between two pages
  *
  * Simulates pm_navigate / pm_back within a self-contained example.
  * Page A (blue) ↔ Page B (green) with navigation buttons.
@@ -133,7 +133,7 @@ void example_main(lv_obj_t *parent)
     s_on_page_b = false;
 
     lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I24 — Page Navigation");
+    lv_label_set_text(title, "I24 - Page Navigation");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 2);

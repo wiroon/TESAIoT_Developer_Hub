@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Production Dashboard — 4 sensor cards + chart + status
+ * @brief   Production Dashboard - 4 sensor cards + chart + status
  *
  * @description
  *   Industrial dashboard with BSP-guarded sensor cards, rolling chart,
@@ -80,7 +80,7 @@ static void dashboard_timer_cb(lv_timer_t *t)
     sensorhub_snapshot_t snap;
     ipc_sensorhub_snapshot(&snap);
 
-    /* IMU (all boards) — real accelerometer magnitude */
+    /* IMU (all boards) - real accelerometer magnitude */
     float accel_mag = 0.0f;
     if (snap.has_bmi270) {
         float ax = snap.bmi270.ax / 16384.0f;

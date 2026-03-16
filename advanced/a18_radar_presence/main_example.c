@@ -1,12 +1,12 @@
 /**
  * @file    main_example.c
- * @brief   Radar Presence Detection — BGT60TR13C sweep + range display
+ * @brief   Radar Presence Detection - BGT60TR13C sweep + range display
  *
  * @description
  *   Animated radar sweep, presence indicator, and range bar using the
  *   BGT60TR13C 60 GHz radar sensor. Polls radar_task for presence state.
  *
- * @board    AI Kit (KIT_PSE84_AI) only — BGT60TR13C
+ * @board    AI Kit (KIT_PSE84_AI) only - BGT60TR13C
  * @author   TESAIoT
  */
 

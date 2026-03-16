@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Image Format Explorer — JPEG/PNG/BMP format details & compression concepts
+ * @brief   Image Format Explorer - JPEG/PNG/BMP format details & compression concepts
  *
  * @description
  *   Educational image format reference UI showing JPEG, PNG, and BMP format
@@ -224,7 +224,7 @@ static void calc_cb(lv_event_t *e)
 }
 
 /* ---------------------------------------------------------------------------
- * Canvas animation timer — draw color space visualization
+ * Canvas animation timer - draw color space visualization
  * --------------------------------------------------------------------------- */
 static void anim_timer_cb(lv_timer_t *timer)
 {
@@ -311,7 +311,7 @@ void example_main(lv_obj_t *parent)
 
     /* UI Concept banner */
     lv_obj_t *concept = lv_label_create(parent);
-    lv_label_set_text(concept, LV_SYMBOL_WARNING " UI Concept — IPC frame share not yet available");
+    lv_label_set_text(concept, LV_SYMBOL_WARNING " UI Concept - IPC frame share not yet available");
     lv_obj_set_style_text_color(concept, lv_color_hex(0xFF9800), 0);
     lv_obj_align(concept, LV_ALIGN_TOP_RIGHT, -10, 8);
 

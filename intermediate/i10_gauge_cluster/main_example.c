@@ -1,5 +1,5 @@
 /**
- * I10 — Gauge Cluster
+ * I10 - Gauge Cluster
  *
  * Three analog-style arc gauges showing temperature, humidity, and pressure.
  * Uses LVGL arc widgets with value labels.

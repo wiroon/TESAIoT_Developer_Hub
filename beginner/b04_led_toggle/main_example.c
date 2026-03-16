@@ -1,14 +1,14 @@
 /**
  * @file main_example.c
- * @brief B04 — LED Toggle: Three buttons toggle Red, Green, Blue LEDs.
+ * @brief B04 - LED Toggle: Three buttons toggle Red, Green, Blue LEDs.
  *
  * Demonstrates real GPIO control from CM55 using Cy_GPIO_Inv() to
  * toggle physical LEDs, with LVGL LED widgets as visual indicators.
  *
  * Hardware:
- *   LED1 (CYBSP_USER_LED1)       — P10.7 (active LOW)
- *   RGB Red (CYBSP_LED_RGB_RED)  — P20.6 (active LOW)
- *   RGB Blue (CYBSP_LED_RGB_BLUE)— P20.5 (active LOW)
+ *   LED1 (CYBSP_USER_LED1)       - P10.7 (active LOW)
+ *   RGB Red (CYBSP_LED_RGB_RED)  - P20.6 (active LOW)
+ *   RGB Blue (CYBSP_LED_RGB_BLUE)- P20.5 (active LOW)
  *
  * @board  AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  */

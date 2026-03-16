@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Pressure Bar — DPS368 atmospheric pressure via IPC sensorhub
+ * @brief   Pressure Bar - DPS368 atmospheric pressure via IPC sensorhub
  *
  * Reads DPS368 pressure every 500ms using ipc_sensorhub_snapshot().
  * Displayed as a bar widget with numeric value and status.

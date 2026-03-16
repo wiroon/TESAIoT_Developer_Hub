@@ -1,447 +1,407 @@
 /**
  * @file    main_example.c
- * @brief   Joystick Visualization — dual-stick crosshair + button indicators
+ * @brief   Joystick - F310 Controller with Live USB HID Overlay
  *
  * @description
- *   Dual-analog-stick gamepad visualization with:
- *     - Left/right stick crosshair areas (200x200) with position dot
- *     - Dead zone ring (40px from center, drawn as circle)
- *     - A/B/X/Y face buttons as colored circles
- *     - LB/RB shoulder button indicators
- *     - D-pad (hat switch) directional arrows
- *     - Raw axis values (LX, LY, RX, RY: 0-255)
+ *   Production joystick visualization from page_joystick.c.
+ *   Displays the Logitech F310 controller image (420x260 RGB565)
+ *   with real-time overlay indicators:
+ *     - 10 button dots (X/A/B/Y/LB/RB/Back/Start/L3/R3)
+ *     - 2 analog stick position dots (left/right)
+ *     - 4 D-pad direction dots (Up/Down/Left/Right)
+ *     - Button state table (7 rows × 4 cols)
+ *     - USB connection status + VID/PID display
  *
- *   In production, joystick data arrives via IPC from CM33_NS USB Host:
- *     IPC_CMD_JOYSTICK_STATE (0xC0) — packed gamepad state
- *   This example uses touch input to simulate stick movement for
- *   demonstration without requiring a connected gamepad.
+ *   Joystick data is LOCAL on CM55 (USB Host). No IPC needed.
+ *   usb_hid_joystick_get_state() returns live F310 HID report.
  *
- * @board   AI Kit, Eva Kit, Game Console (all boards)
- * @author  TESAIoT
+ * @board    AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
+ * @author   TESAIoT
  */
 
 #include "pse84_common.h"
+#include "usb_hid_joystick.h"
+#include "img_f310.h"
 
-/* ── Layout ────────────────────────────────────────────────────────── */
-#define STICK_SIZE       180
-#define STICK_HALF       (STICK_SIZE / 2)
-#define DOT_RADIUS       8
-#define DEADZONE_RADIUS  30
-#define AXIS_CENTER      128     /* 0-255 range, center = 128 */
+/* ---------------------------------------------------------------------------
+ * Button overlay constants (from production page_joystick.c)
+ * --------------------------------------------------------------------------- */
+#define JOY_BTN_DOT_COUNT  10
+#define JOY_DPAD_DOT_COUNT 4
+#define BTN_DOT_SIZE       14
+#define STICK_DOT_SIZE     14
+#define STICK_RANGE        26
 
-/* ── Colors ────────────────────────────────────────────────────────── */
-#define COLOR_BG         lv_color_hex(0x0D1B2A)
-#define COLOR_CARD       lv_color_hex(0x142240)
-#define COLOR_TEXT       lv_color_hex(0xE0E0E0)
-#define COLOR_CROSS      lv_color_hex(0x2A3A5C)
-#define COLOR_DOT        lv_color_hex(0x00BCD4)
-#define COLOR_DEADZONE   lv_color_hex(0x1A3050)
-#define COLOR_BTN_A      lv_color_hex(0x4CAF50)  /* green  */
-#define COLOR_BTN_B      lv_color_hex(0xF44336)  /* red    */
-#define COLOR_BTN_X      lv_color_hex(0x2196F3)  /* blue   */
-#define COLOR_BTN_Y      lv_color_hex(0xFF9800)  /* orange */
-#define COLOR_BTN_OFF    lv_color_hex(0x1A3050)
-#define COLOR_SHOULDER   lv_color_hex(0x7C4DFF)
+enum { DOT_X = 0, DOT_A, DOT_B, DOT_Y, DOT_LB, DOT_RB, DOT_BACK, DOT_START, DOT_L3, DOT_R3 };
+enum { DPAD_UP = 0, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT };
 
-/* ── IPC reference (for documentation) ─────────────────────────────── */
-#define IPC_CMD_JOYSTICK_STATE  (0xC0)
+typedef struct { int16_t x; int16_t y; } btn_pos_t;
 
-/* ── Gamepad state ─────────────────────────────────────────────────── */
+/* Button positions on F310 image (pixel coordinates) */
+static const btn_pos_t s_btn_pos[JOY_BTN_DOT_COUNT] = {
+    [DOT_X]     = { 311,  96 },
+    [DOT_A]     = { 338, 121 },
+    [DOT_B]     = { 374,  88 },
+    [DOT_Y]     = { 346,  62 },
+    [DOT_LB]    = {  80,  18 },
+    [DOT_RB]    = { 340,  18 },
+    [DOT_BACK]  = { 172,  77 },
+    [DOT_START] = { 250,  77 },
+    [DOT_L3]    = { 148, 163 },
+    [DOT_R3]    = { 265, 163 },
+};
+
+/* Button colors */
+static const uint32_t s_btn_color[JOY_BTN_DOT_COUNT] = {
+    [DOT_X]     = 0x2196F3,   /* blue   */
+    [DOT_A]     = 0x4CAF50,   /* green  */
+    [DOT_B]     = 0xF44336,   /* red    */
+    [DOT_Y]     = 0xFF9800,   /* orange */
+    [DOT_LB]    = 0x808080,
+    [DOT_RB]    = 0x808080,
+    [DOT_BACK]  = 0x808080,
+    [DOT_START] = 0x808080,
+    [DOT_L3]    = 0x00BCD4,   /* cyan   */
+    [DOT_R3]    = 0x00BCD4,
+};
+
+#define LEFT_STICK_CX    148
+#define LEFT_STICK_CY    163
+#define RIGHT_STICK_CX   265
+#define RIGHT_STICK_CY   163
+
+#define DPAD_DOT_SIZE    12
+static const btn_pos_t s_dpad_pos[JOY_DPAD_DOT_COUNT] = {
+    [DPAD_UP]    = {  86,  83 },
+    [DPAD_DOWN]  = {  86, 117 },
+    [DPAD_LEFT]  = {  69, 100 },
+    [DPAD_RIGHT] = { 103, 100 },
+};
+
+static const uint8_t s_hat_to_dpad[] = {
+    (1 << DPAD_UP),
+    (1 << DPAD_UP)   | (1 << DPAD_RIGHT),
+    (1 << DPAD_RIGHT),
+    (1 << DPAD_DOWN) | (1 << DPAD_RIGHT),
+    (1 << DPAD_DOWN),
+    (1 << DPAD_DOWN) | (1 << DPAD_LEFT),
+    (1 << DPAD_LEFT),
+    (1 << DPAD_UP)   | (1 << DPAD_LEFT),
+    0,  /* neutral */
+};
+
+static const char * const s_dpad_dirs[] = {
+    "Up", "Up-Right", "Right", "Down-Right",
+    "Down", "Down-Left", "Left", "Up-Left", "---"
+};
+
+/* ---------------------------------------------------------------------------
+ * Module-static context
+ * --------------------------------------------------------------------------- */
 typedef struct {
-    uint8_t lx, ly;         /* left stick  0-255 */
-    uint8_t rx, ry;         /* right stick 0-255 */
-    bool    btn_a, btn_b, btn_x, btn_y;
-    bool    btn_lb, btn_rb;
-    bool    btn_start, btn_back;
-    int8_t  hat;            /* -1=center, 0=N, 1=NE, 2=E, ... 7=NW */
-} gamepad_state_t;
+    lv_obj_t *left_stick_dot;
+    lv_obj_t *right_stick_dot;
+    lv_obj_t *btn_dots[JOY_BTN_DOT_COUNT];
+    lv_obj_t *dpad_dots[JOY_DPAD_DOT_COUNT];
+    lv_obj_t *conn_label;
+    lv_obj_t *info_label;
+    lv_obj_t *btn_table;
+} joy_ctx_t;
 
-static gamepad_state_t s_state;
+static joy_ctx_t s_ctx;
+static char s_info_buf[64];
 
-/* ── UI handles ────────────────────────────────────────────────────── */
-static lv_obj_t *s_left_canvas;
-static lv_obj_t *s_right_canvas;
-static lv_obj_t *s_left_dot;
-static lv_obj_t *s_right_dot;
-static lv_obj_t *s_axis_label;
-static lv_obj_t *s_btn_indicators[4];   /* A, B, X, Y */
-static lv_obj_t *s_btn_labels[4];
-static lv_obj_t *s_lb_indicator;
-static lv_obj_t *s_rb_indicator;
-static lv_obj_t *s_dpad_arrows[4];      /* N, E, S, W */
-
-/* ── Map 0-255 axis to pixel offset from center ───────────────────── */
-static int16_t axis_to_px(uint8_t val)
+/* ---------------------------------------------------------------------------
+ * Helper: create overlay dot on image
+ * --------------------------------------------------------------------------- */
+static lv_obj_t *create_dot(lv_obj_t *parent, int size, int cx, int cy,
+                             uint32_t color, lv_opa_t opa)
 {
-    return (int16_t)((int32_t)(val - AXIS_CENTER) * STICK_HALF / 128);
-}
-
-/* ── Create stick area with crosshair ──────────────────────────────── */
-static lv_obj_t *create_stick_area(lv_obj_t *parent, const char *label_text,
-                                    lv_obj_t **dot_out)
-{
-    lv_obj_t *card = example_card_create(parent, STICK_SIZE + 16, STICK_SIZE + 40, COLOR_CARD);
-
-    /* Label */
-    lv_obj_t *lbl = lv_label_create(card);
-    lv_label_set_text(lbl, label_text);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(lbl, COLOR_TEXT, 0);
-    lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, -4);
-
-    /* Stick field */
-    lv_obj_t *field = lv_obj_create(card);
-    lv_obj_set_size(field, STICK_SIZE, STICK_SIZE);
-    lv_obj_align(field, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_set_style_bg_color(field, lv_color_hex(0x0A1628), 0);
-    lv_obj_set_style_bg_opa(field, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(field, STICK_HALF, 0);
-    lv_obj_set_style_border_color(field, COLOR_CROSS, 0);
-    lv_obj_set_style_border_width(field, 2, 0);
-    lv_obj_clear_flag(field, LV_OBJ_FLAG_SCROLLABLE);
-
-    /* Crosshair lines (horizontal) */
-    lv_obj_t *h_line = lv_obj_create(field);
-    lv_obj_set_size(h_line, STICK_SIZE - 20, 1);
-    lv_obj_set_style_bg_color(h_line, COLOR_CROSS, 0);
-    lv_obj_set_style_bg_opa(h_line, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(h_line, 0, 0);
-    lv_obj_set_style_radius(h_line, 0, 0);
-    lv_obj_center(h_line);
-
-    /* Crosshair lines (vertical) */
-    lv_obj_t *v_line = lv_obj_create(field);
-    lv_obj_set_size(v_line, 1, STICK_SIZE - 20);
-    lv_obj_set_style_bg_color(v_line, COLOR_CROSS, 0);
-    lv_obj_set_style_bg_opa(v_line, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(v_line, 0, 0);
-    lv_obj_set_style_radius(v_line, 0, 0);
-    lv_obj_center(v_line);
-
-    /* Dead zone ring */
-    lv_obj_t *dz = lv_obj_create(field);
-    lv_obj_set_size(dz, DEADZONE_RADIUS * 2, DEADZONE_RADIUS * 2);
-    lv_obj_set_style_bg_opa(dz, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_color(dz, COLOR_DEADZONE, 0);
-    lv_obj_set_style_border_width(dz, 1, 0);
-    lv_obj_set_style_radius(dz, LV_RADIUS_CIRCLE, 0);
-    lv_obj_center(dz);
-
-    /* Position dot */
-    lv_obj_t *dot = lv_obj_create(field);
-    lv_obj_set_size(dot, DOT_RADIUS * 2, DOT_RADIUS * 2);
-    lv_obj_set_style_bg_color(dot, COLOR_DOT, 0);
-    lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
+    lv_obj_t *dot = lv_obj_create(parent);
+    lv_obj_set_size(dot, size, size);
     lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(dot, lv_color_hex(color), 0);
+    lv_obj_set_style_bg_opa(dot, opa, 0);
     lv_obj_set_style_border_width(dot, 0, 0);
-    lv_obj_set_style_shadow_width(dot, 6, 0);
-    lv_obj_set_style_shadow_color(dot, COLOR_DOT, 0);
-    lv_obj_center(dot);
-
-    *dot_out = dot;
-    return field;
+    lv_obj_set_style_pad_all(dot, 0, 0);
+    lv_obj_set_pos(dot, cx - size / 2, cy - size / 2);
+    lv_obj_remove_flag(dot, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    return dot;
 }
 
-/* ── Create face button indicator ──────────────────────────────────── */
-static lv_obj_t *create_btn_circle(lv_obj_t *parent, const char *text,
-                                    lv_color_t color, int x, int y,
-                                    lv_obj_t **label_out)
+/* ---------------------------------------------------------------------------
+ * Table draw callback - color "ON" cells green
+ * --------------------------------------------------------------------------- */
+static void tbl_draw_cb(lv_event_t *e)
 {
-    lv_obj_t *circle = lv_obj_create(parent);
-    lv_obj_set_size(circle, 36, 36);
-    lv_obj_set_style_bg_color(circle, COLOR_BTN_OFF, 0);
-    lv_obj_set_style_bg_opa(circle, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(circle, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_border_color(circle, color, 0);
-    lv_obj_set_style_border_width(circle, 2, 0);
-    lv_obj_align(circle, LV_ALIGN_CENTER, x, y);
-    lv_obj_clear_flag(circle, LV_OBJ_FLAG_SCROLLABLE);
+    lv_draw_task_t *draw_task = lv_event_get_draw_task(e);
+    lv_draw_dsc_base_t *base = (lv_draw_dsc_base_t *)lv_draw_task_get_draw_dsc(draw_task);
+    if (!base || base->part != LV_PART_ITEMS) return;
 
-    lv_obj_t *lbl = lv_label_create(circle);
-    lv_label_set_text(lbl, text);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
-    lv_obj_set_style_text_color(lbl, color, 0);
-    lv_obj_center(lbl);
+    uint32_t col = base->id2;
+    if (col != 1 && col != 3) return;
 
-    *label_out = lbl;
-    return circle;
+    lv_obj_t *table = lv_event_get_target(e);
+    const char *val = lv_table_get_cell_value(table, base->id1, col);
+
+    lv_draw_label_dsc_t *label_dsc = lv_draw_task_get_label_dsc(draw_task);
+    if (label_dsc && val && strcmp(val, "ON") == 0) {
+        label_dsc->color = lv_color_hex(0x4CAF50);
+        label_dsc->font = &lv_font_montserrat_16;
+    }
 }
 
-/* ── Touch event on stick areas (simulation) ───────────────────────── */
-static void stick_touch_cb(lv_event_t *e)
-{
-    lv_obj_t *field = lv_event_get_target(e);
-    lv_point_t point;
-    lv_indev_get_point(lv_indev_active(), &point);
+/* ---------------------------------------------------------------------------
+ * Create button state table
+ * --------------------------------------------------------------------------- */
+#define TBL_ROWS 7
+#define TBL_COLS 4
 
-    /* Convert screen coords to field-local coords */
-    int32_t fx = lv_obj_get_x(field);
-    int32_t fy = lv_obj_get_y(field);
-    /* Account for parent offset */
-    lv_obj_t *par = lv_obj_get_parent(field);
-    if (par) {
-        fx += lv_obj_get_x(par);
-        fy += lv_obj_get_y(par);
-        lv_obj_t *gpar = lv_obj_get_parent(par);
-        if (gpar) {
-            fx += lv_obj_get_x(gpar);
-            fy += lv_obj_get_y(gpar);
+static lv_obj_t *create_btn_table(lv_obj_t *parent)
+{
+    lv_obj_t *table = lv_table_create(parent);
+    lv_table_set_column_count(table, TBL_COLS);
+    lv_table_set_row_count(table, TBL_ROWS);
+    lv_table_set_column_width(table, 0, 56);
+    lv_table_set_column_width(table, 1, 67);
+    lv_table_set_column_width(table, 2, 56);
+    lv_table_set_column_width(table, 3, 67);
+
+    lv_table_set_cell_value(table, 0, 0, "X");
+    lv_table_set_cell_value(table, 0, 2, "Y");
+    lv_table_set_cell_value(table, 1, 0, "A");
+    lv_table_set_cell_value(table, 1, 2, "B");
+    lv_table_set_cell_value(table, 2, 0, "LB");
+    lv_table_set_cell_value(table, 2, 2, "RB");
+    lv_table_set_cell_value(table, 3, 0, "LT");
+    lv_table_set_cell_value(table, 3, 2, "RT");
+    lv_table_set_cell_value(table, 4, 0, "Back");
+    lv_table_set_cell_value(table, 4, 2, "Start");
+    lv_table_set_cell_value(table, 5, 0, "L3");
+    lv_table_set_cell_value(table, 5, 2, "R3");
+    lv_table_set_cell_value(table, 6, 0, "DPad");
+    lv_table_set_cell_value(table, 6, 2, "");
+
+    for (int r = 0; r < TBL_ROWS - 1; r++) {
+        lv_table_set_cell_value(table, r, 1, "--");
+        lv_table_set_cell_value(table, r, 3, "--");
+    }
+    lv_table_set_cell_value(table, 6, 1, "---");
+    lv_table_set_cell_value(table, 6, 3, "");
+
+    /* Styling */
+    lv_obj_set_style_bg_color(table, UI_COLOR_CARD_BG, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(table, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_color(table, lv_color_hex(0xFFD740), LV_PART_MAIN);
+    lv_obj_set_style_border_width(table, 1, LV_PART_MAIN);
+    lv_obj_set_style_radius(table, UI_CARD_RADIUS, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(table, 0, LV_PART_MAIN);
+
+    lv_obj_set_style_text_font(table, &lv_font_montserrat_14, LV_PART_ITEMS);
+    lv_obj_set_style_text_color(table, UI_COLOR_TEXT, LV_PART_ITEMS);
+    lv_obj_set_style_bg_color(table, UI_COLOR_CARD_BG, LV_PART_ITEMS);
+    lv_obj_set_style_bg_opa(table, LV_OPA_COVER, LV_PART_ITEMS);
+    lv_obj_set_style_border_color(table, lv_color_hex(0x2A3A5C), LV_PART_ITEMS);
+    lv_obj_set_style_border_width(table, 1, LV_PART_ITEMS);
+    lv_obj_set_style_pad_top(table, 4, LV_PART_ITEMS);
+    lv_obj_set_style_pad_bottom(table, 4, LV_PART_ITEMS);
+    lv_obj_set_style_pad_left(table, 6, LV_PART_ITEMS);
+    lv_obj_set_style_pad_right(table, 4, LV_PART_ITEMS);
+
+    lv_obj_remove_flag(table, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(table, tbl_draw_cb, LV_EVENT_DRAW_TASK_ADDED, NULL);
+    lv_obj_add_flag(table, LV_OBJ_FLAG_SEND_DRAW_TASK_EVENTS);
+
+    return table;
+}
+
+/* ---------------------------------------------------------------------------
+ * Timer callback - read USB HID and update overlay
+ * --------------------------------------------------------------------------- */
+static void joy_timer_cb(lv_timer_t *t)
+{
+    (void)t;
+    const joystick_state_t *joy = usb_hid_joystick_get_state();
+
+    if (!joy->connected) {
+        if (s_ctx.conn_label) {
+            if (joy->usb_init_done) {
+                lv_label_set_text(s_ctx.conn_label, "USB Host: OK\nWaiting for\ndevice...");
+                lv_obj_set_style_text_color(s_ctx.conn_label, UI_COLOR_WARNING, 0);
+            } else {
+                lv_label_set_text(s_ctx.conn_label, "USB Host:\nNOT init");
+                lv_obj_set_style_text_color(s_ctx.conn_label, UI_COLOR_ERROR, 0);
+            }
         }
+        /* Dim all dots when disconnected */
+        for (int i = 0; i < JOY_BTN_DOT_COUNT; i++)
+            if (s_ctx.btn_dots[i]) lv_obj_set_style_bg_opa(s_ctx.btn_dots[i], LV_OPA_20, 0);
+        for (int i = 0; i < JOY_DPAD_DOT_COUNT; i++)
+            if (s_ctx.dpad_dots[i]) lv_obj_set_style_bg_opa(s_ctx.dpad_dots[i], LV_OPA_20, 0);
+        return;
     }
 
-    int32_t local_x = point.x - fx - STICK_HALF;
-    int32_t local_y = point.y - fy - STICK_HALF;
+    /* Connected - update everything */
+    if (s_ctx.conn_label) {
+        lv_label_set_text(s_ctx.conn_label, "Connected");
+        lv_obj_set_style_text_color(s_ctx.conn_label, UI_COLOR_SUCCESS, 0);
+    }
 
-    /* Clamp to stick range */
-    if (local_x < -STICK_HALF) local_x = -STICK_HALF;
-    if (local_x >  STICK_HALF) local_x =  STICK_HALF;
-    if (local_y < -STICK_HALF) local_y = -STICK_HALF;
-    if (local_y >  STICK_HALF) local_y =  STICK_HALF;
+    uint8_t lx = joy->report.left_x;
+    uint8_t ly = joy->report.left_y;
+    uint8_t rx = joy->report.right_x;
+    uint8_t ry = joy->report.right_y;
+    uint8_t b1 = joy->report.buttons1;
+    uint8_t b2 = joy->report.buttons2;
 
-    /* Convert to 0-255 */
-    uint8_t ax = (uint8_t)(AXIS_CENTER + local_x * 128 / STICK_HALF);
-    uint8_t ay = (uint8_t)(AXIS_CENTER + local_y * 128 / STICK_HALF);
+    /* Button overlay dots */
+    bool pressed[JOY_BTN_DOT_COUNT];
+    pressed[DOT_X]     = (b1 & F310_BTN_X)     != 0;
+    pressed[DOT_A]     = (b1 & F310_BTN_A)     != 0;
+    pressed[DOT_B]     = (b1 & F310_BTN_B)     != 0;
+    pressed[DOT_Y]     = (b1 & F310_BTN_Y)     != 0;
+    pressed[DOT_LB]    = (b2 & F310_BTN_LB)    != 0;
+    pressed[DOT_RB]    = (b2 & F310_BTN_RB)    != 0;
+    pressed[DOT_BACK]  = (b2 & F310_BTN_BACK)  != 0;
+    pressed[DOT_START] = (b2 & F310_BTN_START) != 0;
+    pressed[DOT_L3]    = (b2 & F310_BTN_L3)    != 0;
+    pressed[DOT_R3]    = (b2 & F310_BTN_R3)    != 0;
 
-    /* Determine which stick (left field = s_left_canvas) */
-    if (field == s_left_canvas) {
-        s_state.lx = ax;
-        s_state.ly = ay;
-    } else {
-        s_state.rx = ax;
-        s_state.ry = ay;
+    for (int i = 0; i < JOY_BTN_DOT_COUNT; i++)
+        if (s_ctx.btn_dots[i])
+            lv_obj_set_style_bg_opa(s_ctx.btn_dots[i],
+                                    pressed[i] ? LV_OPA_COVER : LV_OPA_40, 0);
+
+    /* Analog stick positions */
+    if (s_ctx.left_stick_dot) {
+        int dx = ((int)lx - 128) * STICK_RANGE / 128;
+        int dy = ((int)ly - 128) * STICK_RANGE / 128;
+        lv_obj_set_pos(s_ctx.left_stick_dot,
+                       LEFT_STICK_CX + dx - STICK_DOT_SIZE / 2,
+                       LEFT_STICK_CY + dy - STICK_DOT_SIZE / 2);
+    }
+    if (s_ctx.right_stick_dot) {
+        int dx = ((int)rx - 128) * STICK_RANGE / 128;
+        int dy = ((int)ry - 128) * STICK_RANGE / 128;
+        lv_obj_set_pos(s_ctx.right_stick_dot,
+                       RIGHT_STICK_CX + dx - STICK_DOT_SIZE / 2,
+                       RIGHT_STICK_CY + dy - STICK_DOT_SIZE / 2);
+    }
+
+    /* D-pad */
+    uint8_t hat = b1 & F310_HAT_MASK;
+    if (hat > F310_HAT_NEUTRAL) hat = F310_HAT_NEUTRAL;
+    uint8_t dpad_mask = s_hat_to_dpad[hat];
+    for (int i = 0; i < JOY_DPAD_DOT_COUNT; i++)
+        if (s_ctx.dpad_dots[i])
+            lv_obj_set_style_bg_opa(s_ctx.dpad_dots[i],
+                                    (dpad_mask & (1 << i)) ? LV_OPA_COVER : LV_OPA_40, 0);
+
+    /* Button state table */
+    if (s_ctx.btn_table) {
+        #define ON  "ON"
+        #define OFF "--"
+        lv_table_set_cell_value(s_ctx.btn_table, 0, 1, pressed[DOT_X]     ? ON : OFF);
+        lv_table_set_cell_value(s_ctx.btn_table, 0, 3, pressed[DOT_Y]     ? ON : OFF);
+        lv_table_set_cell_value(s_ctx.btn_table, 1, 1, pressed[DOT_A]     ? ON : OFF);
+        lv_table_set_cell_value(s_ctx.btn_table, 1, 3, pressed[DOT_B]     ? ON : OFF);
+        lv_table_set_cell_value(s_ctx.btn_table, 2, 1, pressed[DOT_LB]    ? ON : OFF);
+        lv_table_set_cell_value(s_ctx.btn_table, 2, 3, pressed[DOT_RB]    ? ON : OFF);
+        lv_table_set_cell_value(s_ctx.btn_table, 3, 1, (b2 & F310_BTN_LT) ? ON : OFF);
+        lv_table_set_cell_value(s_ctx.btn_table, 3, 3, (b2 & F310_BTN_RT) ? ON : OFF);
+        lv_table_set_cell_value(s_ctx.btn_table, 4, 1, pressed[DOT_BACK]  ? ON : OFF);
+        lv_table_set_cell_value(s_ctx.btn_table, 4, 3, pressed[DOT_START] ? ON : OFF);
+        lv_table_set_cell_value(s_ctx.btn_table, 5, 1, pressed[DOT_L3]    ? ON : OFF);
+        lv_table_set_cell_value(s_ctx.btn_table, 5, 3, pressed[DOT_R3]    ? ON : OFF);
+        lv_table_set_cell_value(s_ctx.btn_table, 6, 1, s_dpad_dirs[hat]);
+        #undef ON
+        #undef OFF
+    }
+
+    if (s_ctx.info_label) {
+        snprintf(s_info_buf, sizeof(s_info_buf),
+                 "VID:%04X PID:%04X  Mode:%u",
+                 joy->vid, joy->pid, (unsigned)joy->report.mode);
+        lv_label_set_text(s_ctx.info_label, s_info_buf);
     }
 }
 
-static void stick_release_cb(lv_event_t *e)
-{
-    lv_obj_t *field = lv_event_get_target(e);
-    if (field == s_left_canvas) {
-        s_state.lx = AXIS_CENTER;
-        s_state.ly = AXIS_CENTER;
-    } else {
-        s_state.rx = AXIS_CENTER;
-        s_state.ry = AXIS_CENTER;
-    }
-}
-
-/* ── Update timer ──────────────────────────────────────────────────── */
-static void update_timer_cb(lv_timer_t *timer)
-{
-    (void)timer;
-
-    /* Update stick dots */
-    int16_t lx_px = axis_to_px(s_state.lx);
-    int16_t ly_px = axis_to_px(s_state.ly);
-    lv_obj_align(s_left_dot, LV_ALIGN_CENTER, lx_px, ly_px);
-
-    int16_t rx_px = axis_to_px(s_state.rx);
-    int16_t ry_px = axis_to_px(s_state.ry);
-    lv_obj_align(s_right_dot, LV_ALIGN_CENTER, rx_px, ry_px);
-
-    /* Update axis values */
-    lv_label_set_text_fmt(s_axis_label,
-        "LX:%3u  LY:%3u  |  RX:%3u  RY:%3u",
-        s_state.lx, s_state.ly, s_state.rx, s_state.ry);
-
-    /* Update face buttons (toggle with simulated timer) */
-    const lv_color_t btn_colors[] = {
-        COLOR_BTN_A, COLOR_BTN_B, COLOR_BTN_X, COLOR_BTN_Y
-    };
-    const bool *btn_states[] = {
-        &s_state.btn_a, &s_state.btn_b, &s_state.btn_x, &s_state.btn_y
-    };
-    for (int i = 0; i < 4; i++) {
-        if (*btn_states[i]) {
-            lv_obj_set_style_bg_color(s_btn_indicators[i], btn_colors[i], 0);
-        } else {
-            lv_obj_set_style_bg_color(s_btn_indicators[i], COLOR_BTN_OFF, 0);
-        }
-    }
-
-    /* Shoulder buttons */
-    lv_obj_set_style_bg_color(s_lb_indicator,
-        s_state.btn_lb ? COLOR_SHOULDER : COLOR_BTN_OFF, 0);
-    lv_obj_set_style_bg_color(s_rb_indicator,
-        s_state.btn_rb ? COLOR_SHOULDER : COLOR_BTN_OFF, 0);
-
-    /* D-pad (hat) — highlight active direction */
-    bool hat_n = (s_state.hat == 0 || s_state.hat == 1 || s_state.hat == 7);
-    bool hat_e = (s_state.hat == 1 || s_state.hat == 2 || s_state.hat == 3);
-    bool hat_s = (s_state.hat == 3 || s_state.hat == 4 || s_state.hat == 5);
-    bool hat_w = (s_state.hat == 5 || s_state.hat == 6 || s_state.hat == 7);
-
-    lv_obj_set_style_text_color(s_dpad_arrows[0],
-        hat_n ? COLOR_DOT : COLOR_CROSS, 0);
-    lv_obj_set_style_text_color(s_dpad_arrows[1],
-        hat_e ? COLOR_DOT : COLOR_CROSS, 0);
-    lv_obj_set_style_text_color(s_dpad_arrows[2],
-        hat_s ? COLOR_DOT : COLOR_CROSS, 0);
-    lv_obj_set_style_text_color(s_dpad_arrows[3],
-        hat_w ? COLOR_DOT : COLOR_CROSS, 0);
-}
-
-/* ── Demo: cycle button states for visual feedback ─────────────────── */
-static uint32_t s_demo_counter;
-
-static void demo_btn_timer_cb(lv_timer_t *timer)
-{
-    (void)timer;
-    s_demo_counter++;
-
-    /* Toggle buttons in pattern */
-    s_state.btn_a = (s_demo_counter % 8 < 2);
-    s_state.btn_b = ((s_demo_counter + 2) % 8 < 2);
-    s_state.btn_x = ((s_demo_counter + 4) % 8 < 2);
-    s_state.btn_y = ((s_demo_counter + 6) % 8 < 2);
-    s_state.btn_lb = (s_demo_counter % 6 < 2);
-    s_state.btn_rb = ((s_demo_counter + 3) % 6 < 2);
-
-    /* Cycle hat switch */
-    s_state.hat = (int8_t)((s_demo_counter / 3) % 9) - 1;
-}
-
-/* ── Entry point ───────────────────────────────────────────────────── */
+/* ---------------------------------------------------------------------------
+ * Main entry point
+ * --------------------------------------------------------------------------- */
 void example_main(lv_obj_t *parent)
 {
-    /* Reset state */
-    memset(&s_state, 0, sizeof(s_state));
-    s_state.lx = AXIS_CENTER;
-    s_state.ly = AXIS_CENTER;
-    s_state.rx = AXIS_CENTER;
-    s_state.ry = AXIS_CENTER;
-    s_state.hat = -1;
-    s_demo_counter = 0;
+    memset(&s_ctx, 0, sizeof(s_ctx));
 
-    lv_obj_set_style_bg_color(parent, COLOR_BG, 0);
+    /* Request USB Host init (non-blocking) */
+    (void)usb_hid_joystick_request_init();
 
-    /* ── Title ─────────────────────────────────────────────────────── */
-    lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, LV_SYMBOL_SETTINGS " Joystick Visualization");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_bg_color(parent, lv_color_hex(0x0D1B2A), 0);
+    lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, 0);
+
+    /* Title */
+    lv_obj_t *title = example_label_create(parent,
+        LV_SYMBOL_SETTINGS " F310 Joystick - Live USB HID",
+        &lv_font_montserrat_20, lv_color_hex(0xFFD740));
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
 
-    /* แสดงผลจอยสติ๊ก */
-    lv_obj_t *th_sub = lv_label_create(parent);
-    lv_label_set_text(th_sub, "แสดงผลจอยสติ๊ก");
-    lv_obj_set_style_text_font(th_sub, &lv_font_noto_thai_14, 0);
-    lv_obj_set_style_text_color(th_sub, UI_COLOR_TEXT_DIM, 0);
-    lv_obj_align(th_sub, LV_ALIGN_TOP_MID, 0, 28);
+    /* จอยสติ๊ก */
+    thai_label(parent, "จอยสติ๊ก USB (ฮาร์ดแวร์จริง)", 14, UI_COLOR_TEXT_DIM);
 
-    /* ── Left stick ────────────────────────────────────────────────── */
-    s_left_canvas = create_stick_area(parent, "Left Stick", &s_left_dot);
-    lv_obj_t *left_parent = lv_obj_get_parent(s_left_canvas);
-    lv_obj_align(left_parent, LV_ALIGN_TOP_LEFT, 12, 32);
-    lv_obj_add_flag(s_left_canvas, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(s_left_canvas, stick_touch_cb, LV_EVENT_PRESSING, NULL);
-    lv_obj_add_event_cb(s_left_canvas, stick_release_cb, LV_EVENT_RELEASED, NULL);
+    /* ── LEFT: F310 Image + overlay dots ───────────────────────────── */
+    lv_obj_t *img_cont = lv_obj_create(parent);
+    lv_obj_set_size(img_cont, IMG_F310_W, IMG_F310_H);
+    lv_obj_set_style_pad_all(img_cont, 0, 0);
+    lv_obj_set_style_bg_opa(img_cont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(img_cont, 0, 0);
+    lv_obj_clear_flag(img_cont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_align(img_cont, LV_ALIGN_LEFT_MID, 16, 15);
 
-    /* ── Right stick ───────────────────────────────────────────────── */
-    s_right_canvas = create_stick_area(parent, "Right Stick", &s_right_dot);
-    lv_obj_t *right_parent = lv_obj_get_parent(s_right_canvas);
-    lv_obj_align(right_parent, LV_ALIGN_TOP_RIGHT, -12, 32);
-    lv_obj_add_flag(s_right_canvas, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(s_right_canvas, stick_touch_cb, LV_EVENT_PRESSING, NULL);
-    lv_obj_add_event_cb(s_right_canvas, stick_release_cb, LV_EVENT_RELEASED, NULL);
+    lv_obj_t *img = lv_image_create(img_cont);
+    lv_image_set_src(img, &img_f310);
+    lv_obj_set_pos(img, 0, 0);
 
-    /* ── Axis values ───────────────────────────────────────────────── */
-    s_axis_label = lv_label_create(parent);
-    lv_label_set_text_fmt(s_axis_label, "LX:%3u  LY:%3u  |  RX:%3u  RY:%3u",
-                          AXIS_CENTER, AXIS_CENTER, AXIS_CENTER, AXIS_CENTER);
-    lv_obj_set_style_text_font(s_axis_label, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(s_axis_label, COLOR_TEXT, 0);
-    lv_obj_align(s_axis_label, LV_ALIGN_TOP_MID, 0, 276);
+    /* Button overlay dots */
+    for (int i = 0; i < JOY_BTN_DOT_COUNT; i++)
+        s_ctx.btn_dots[i] = create_dot(img_cont, BTN_DOT_SIZE,
+                                       s_btn_pos[i].x, s_btn_pos[i].y,
+                                       s_btn_color[i], LV_OPA_40);
 
-    /* ── Face buttons (A/B/X/Y) ────────────────────────────────────── */
-    lv_obj_t *btn_card = example_card_create(parent, 200, 120, COLOR_CARD);
-    lv_obj_align(btn_card, LV_ALIGN_TOP_RIGHT, -20, 300);
+    /* Analog stick dots */
+    s_ctx.left_stick_dot = create_dot(img_cont, STICK_DOT_SIZE,
+                                      LEFT_STICK_CX, LEFT_STICK_CY,
+                                      0x00BCD4, LV_OPA_COVER);
+    s_ctx.right_stick_dot = create_dot(img_cont, STICK_DOT_SIZE,
+                                       RIGHT_STICK_CX, RIGHT_STICK_CY,
+                                       0x00BCD4, LV_OPA_COVER);
 
-    /*         X
-     *       Y   A
-     *         B        */
-    s_btn_indicators[0] = create_btn_circle(btn_card, "A", COLOR_BTN_A, 40, 0, &s_btn_labels[0]);
-    s_btn_indicators[1] = create_btn_circle(btn_card, "B", COLOR_BTN_B, 0, 30, &s_btn_labels[1]);
-    s_btn_indicators[2] = create_btn_circle(btn_card, "X", COLOR_BTN_X, 0, -30, &s_btn_labels[2]);
-    s_btn_indicators[3] = create_btn_circle(btn_card, "Y", COLOR_BTN_Y, -40, 0, &s_btn_labels[3]);
+    /* D-pad dots */
+    for (int i = 0; i < JOY_DPAD_DOT_COUNT; i++)
+        s_ctx.dpad_dots[i] = create_dot(img_cont, DPAD_DOT_SIZE,
+                                         s_dpad_pos[i].x, s_dpad_pos[i].y,
+                                         0x00BCD4, LV_OPA_40);
 
-    /* ── D-pad ─────────────────────────────────────────────────────── */
-    lv_obj_t *dpad_card = example_card_create(parent, 130, 120, COLOR_CARD);
-    lv_obj_align(dpad_card, LV_ALIGN_TOP_LEFT, 20, 300);
+    /* ── RIGHT: Connection status + button table ───────────────────── */
+    lv_obj_t *right_col = lv_obj_create(parent);
+    lv_obj_remove_style_all(right_col);
+    lv_obj_set_size(right_col, 290, 340);
+    lv_obj_align(right_col, LV_ALIGN_RIGHT_MID, -16, 15);
+    lv_obj_set_flex_flow(right_col, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_gap(right_col, 8, 0);
+    lv_obj_clear_flag(right_col, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t *dpad_title = lv_label_create(dpad_card);
-    lv_label_set_text(dpad_title, "D-Pad");
-    lv_obj_set_style_text_font(dpad_title, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(dpad_title, COLOR_TEXT, 0);
-    lv_obj_align(dpad_title, LV_ALIGN_TOP_MID, 0, -6);
+    s_ctx.conn_label = lv_label_create(right_col);
+    lv_label_set_text(s_ctx.conn_label, "USB Host:\nNOT init");
+    lv_obj_set_style_text_font(s_ctx.conn_label, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(s_ctx.conn_label, UI_COLOR_ERROR, 0);
 
-    /* N, E, S, W arrows */
-    s_dpad_arrows[0] = lv_label_create(dpad_card);
-    lv_label_set_text(s_dpad_arrows[0], LV_SYMBOL_UP);
-    lv_obj_set_style_text_font(s_dpad_arrows[0], &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(s_dpad_arrows[0], COLOR_CROSS, 0);
-    lv_obj_align(s_dpad_arrows[0], LV_ALIGN_CENTER, 0, -22);
+    s_ctx.info_label = lv_label_create(right_col);
+    lv_label_set_text(s_ctx.info_label, "VID:---- PID:----");
+    lv_obj_set_style_text_font(s_ctx.info_label, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(s_ctx.info_label, UI_COLOR_TEXT_DIM, 0);
 
-    s_dpad_arrows[1] = lv_label_create(dpad_card);
-    lv_label_set_text(s_dpad_arrows[1], LV_SYMBOL_RIGHT);
-    lv_obj_set_style_text_font(s_dpad_arrows[1], &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(s_dpad_arrows[1], COLOR_CROSS, 0);
-    lv_obj_align(s_dpad_arrows[1], LV_ALIGN_CENTER, 22, 0);
+    s_ctx.btn_table = create_btn_table(right_col);
 
-    s_dpad_arrows[2] = lv_label_create(dpad_card);
-    lv_label_set_text(s_dpad_arrows[2], LV_SYMBOL_DOWN);
-    lv_obj_set_style_text_font(s_dpad_arrows[2], &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(s_dpad_arrows[2], COLOR_CROSS, 0);
-    lv_obj_align(s_dpad_arrows[2], LV_ALIGN_CENTER, 0, 22);
-
-    s_dpad_arrows[3] = lv_label_create(dpad_card);
-    lv_label_set_text(s_dpad_arrows[3], LV_SYMBOL_LEFT);
-    lv_obj_set_style_text_font(s_dpad_arrows[3], &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(s_dpad_arrows[3], COLOR_CROSS, 0);
-    lv_obj_align(s_dpad_arrows[3], LV_ALIGN_CENTER, -22, 0);
-
-    /* ── Shoulder buttons ──────────────────────────────────────────── */
-    s_lb_indicator = lv_obj_create(parent);
-    lv_obj_set_size(s_lb_indicator, 70, 28);
-    lv_obj_align(s_lb_indicator, LV_ALIGN_TOP_LEFT, 60, 430);
-    lv_obj_set_style_bg_color(s_lb_indicator, COLOR_BTN_OFF, 0);
-    lv_obj_set_style_bg_opa(s_lb_indicator, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(s_lb_indicator, 6, 0);
-    lv_obj_set_style_border_color(s_lb_indicator, COLOR_SHOULDER, 0);
-    lv_obj_set_style_border_width(s_lb_indicator, 1, 0);
-    lv_obj_clear_flag(s_lb_indicator, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_t *lb_lbl = lv_label_create(s_lb_indicator);
-    lv_label_set_text(lb_lbl, "LB");
-    lv_obj_set_style_text_color(lb_lbl, COLOR_TEXT, 0);
-    lv_obj_set_style_text_font(lb_lbl, &lv_font_montserrat_14, 0);
-    lv_obj_center(lb_lbl);
-
-    s_rb_indicator = lv_obj_create(parent);
-    lv_obj_set_size(s_rb_indicator, 70, 28);
-    lv_obj_align(s_rb_indicator, LV_ALIGN_TOP_RIGHT, -60, 430);
-    lv_obj_set_style_bg_color(s_rb_indicator, COLOR_BTN_OFF, 0);
-    lv_obj_set_style_bg_opa(s_rb_indicator, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(s_rb_indicator, 6, 0);
-    lv_obj_set_style_border_color(s_rb_indicator, COLOR_SHOULDER, 0);
-    lv_obj_set_style_border_width(s_rb_indicator, 1, 0);
-    lv_obj_clear_flag(s_rb_indicator, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_t *rb_lbl = lv_label_create(s_rb_indicator);
-    lv_label_set_text(rb_lbl, "RB");
-    lv_obj_set_style_text_color(rb_lbl, COLOR_TEXT, 0);
-    lv_obj_set_style_text_font(rb_lbl, &lv_font_montserrat_14, 0);
-    lv_obj_center(rb_lbl);
-
-    /* ── IPC reference note ────────────────────────────────────────── */
-    lv_obj_t *note = lv_label_create(parent);
-    lv_label_set_text(note,
-        "Touch sticks to simulate | Buttons cycle in demo\n"
-        "Production: IPC_CMD_JOYSTICK_STATE (0xC0) from CM33_NS USB Host");
-    lv_obj_set_style_text_font(note, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(note, lv_color_hex(0x808080), 0);
-    lv_obj_set_style_text_align(note, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_width(note, 440);
-    lv_obj_align(note, LV_ALIGN_TOP_MID, 0, 468);
-
-    /* ── Timers ────────────────────────────────────────────────────── */
-    lv_timer_create(update_timer_cb, 20, NULL);      /* 50 fps UI update */
-    lv_timer_create(demo_btn_timer_cb, 300, NULL);    /* button demo cycle */
+    /* Start 50ms timer (20 fps joystick polling) */
+    lv_timer_create(joy_timer_cb, 50, NULL);
 }

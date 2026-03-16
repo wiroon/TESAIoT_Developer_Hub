@@ -1,5 +1,5 @@
 /**
- * I15 — Tile Navigation
+ * I15 - Tile Navigation
  *
  * Multi-page tile view with swipe navigation between 4 pages.
  * Each page shows different content (sensors, chart, status, about).
@@ -198,7 +198,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_text_align(ctx.lbl_page, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_pad_ver(ctx.lbl_page, 4, 0);
 
-    /* Tileview — horizontal swipe */
+    /* Tileview - horizontal swipe */
     ctx.tileview = lv_tileview_create(parent);
     lv_obj_set_size(ctx.tileview, 800, 440);
     lv_obj_set_style_bg_color(ctx.tileview, lv_color_hex(0x0D1B2A), 0);

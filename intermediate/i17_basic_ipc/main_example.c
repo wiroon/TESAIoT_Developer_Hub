@@ -1,9 +1,9 @@
 /**
  * @file    main_example.c
- * @brief   Basic IPC — CM33↔CM55 ping-pong with SendMessage/RegisterCallback
+ * @brief   Basic IPC - CM33↔CM55 ping-pong with SendMessage/RegisterCallback
  *
  * CRITICAL: Never call Cy_IPC_Pipe_SendMessage from inside a
- * RegisterCallback handler — use the deferred flag pattern instead.
+ * RegisterCallback handler - use the deferred flag pattern instead.
  */
 
 #include "pse84_common.h"
@@ -21,21 +21,21 @@ static lv_obj_t *s_lbl_count;
 static lv_obj_t *s_lbl_dir;
 
 /* ── IPC message structure ───────────────────────────────────────── */
-/* CRITICAL: IPC TX buffer MUST be in shared SRAM — the other core
+/* CRITICAL: IPC TX buffer MUST be in shared SRAM - the other core
  * reads this memory via the pointer passed to SendMessage.
  * Without CY_SECTION_SHAREDMEM the buffer sits in core-private
  * SRAM and the receiver gets garbage or a BusFault. */
 CY_SECTION_SHAREDMEM static ipc_msg_t s_tx_msg;
 
-/* ── Callback — runs in IPC ISR context, DO NOT call SendMessage ── */
+/* ── Callback - runs in IPC ISR context, DO NOT call SendMessage ── */
 static void ipc_rx_cb(uint32_t *msg_ptr)
 {
     ipc_msg_t *msg = (ipc_msg_t *)msg_ptr;
 
     if (msg->cmd == IPC_CMD_PING) {
-        /* Received ping from CM33 — schedule pong from task loop */
+        /* Received ping from CM33 - schedule pong from task loop */
         s_counter++;
-        s_need_pong = true;   /* DEFERRED — will send in LVGL timer */
+        s_need_pong = true;   /* DEFERRED - will send in LVGL timer */
     }
 }
 
@@ -50,7 +50,7 @@ static void send_ping(void)
                             (uint32_t *)&s_tx_msg, NULL);
 }
 
-/* ── Button event — initiate first ping ──────────────────────────── */
+/* ── Button event - initiate first ping ──────────────────────────── */
 static void btn_ping_cb(lv_event_t *e)
 {
     if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
@@ -60,7 +60,7 @@ static void btn_ping_cb(lv_event_t *e)
     }
 }
 
-/* ── LVGL timer — process deferred pong ──────────────────────────── */
+/* ── LVGL timer - process deferred pong ──────────────────────────── */
 static void poll_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
@@ -68,7 +68,7 @@ static void poll_timer_cb(lv_timer_t *timer)
     if (s_need_pong) {
         s_need_pong = false;
 
-        /* Safe to call SendMessage here — we are in task context */
+        /* Safe to call SendMessage here - we are in task context */
         s_tx_msg.cmd     = IPC_CMD_PONG;
         s_tx_msg.data[0] = (uint8_t)(s_counter & 0xFF);
 
@@ -86,7 +86,7 @@ static void poll_timer_cb(lv_timer_t *timer)
 void example_main(lv_obj_t *parent)
 {
     lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I17 — Basic IPC Ping-Pong");
+    lv_label_set_text(title, "I17 - Basic IPC Ping-Pong");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);

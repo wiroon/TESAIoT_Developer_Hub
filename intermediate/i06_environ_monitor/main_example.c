@@ -1,5 +1,5 @@
 /**
- * I06 — Environmental Monitor
+ * I06 - Environmental Monitor
  *
  * Temperature + Humidity + Pressure monitor with large readouts,
  * trend indicators, and comfort zone assessment.

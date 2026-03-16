@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   WiFi Connect — STA connection flow with wifi_manager API
+ * @brief   WiFi Connect - STA connection flow with wifi_manager API
  *
  * @description
  *   Non-blocking WiFi STA flow: scan -> select AP from dropdown -> enter

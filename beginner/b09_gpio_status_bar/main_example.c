@@ -1,11 +1,11 @@
 /**
  * @file    main_example.c
- * @brief   GPIO Status Bar — Real-time board status indicators
+ * @brief   GPIO Status Bar - Real-time board status indicators
  *
  * Three status indicators driven by real hardware signals:
- *   PWR — Always ON (board is powered)
- *   NET — WiFi connected state via ipc_sensorhub_wifi_connected()
- *   ACT — Sensor activity heartbeat via ipc_sensorhub_snapshot()
+ *   PWR - Always ON (board is powered)
+ *   NET - WiFi connected state via ipc_sensorhub_wifi_connected()
+ *   ACT - Sensor activity heartbeat via ipc_sensorhub_snapshot()
  *
  * @board  AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  */
@@ -43,7 +43,7 @@ static void status_poll_cb(lv_timer_t *t)
     /* NET: real WiFi connected state from CM33 via IPC */
     indicators[1].active = ipc_sensorhub_wifi_connected();
 
-    /* ACT: sensor activity — true if any sensor has new data */
+    /* ACT: sensor activity - true if any sensor has new data */
     sensorhub_snapshot_t snap;
     ipc_sensorhub_snapshot(&snap);
     indicators[2].active = (snap.has_bmi270 && snap.bmi270_changed) ||

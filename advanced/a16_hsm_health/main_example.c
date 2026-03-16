@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   HSM Health Status — Real OPTIGA Trust M via IPC
+ * @brief   HSM Health Status - Real OPTIGA Trust M via IPC
  *
  * @description
  *   Reads OPTIGA chip data via IPC_CMD_HSM_REQUEST (0xB5) and runs

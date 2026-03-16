@@ -1,11 +1,11 @@
 /**
  * @file    main_example.c
- * @brief   LED On/Off — ON and OFF buttons control a real hardware LED
+ * @brief   LED On/Off - ON and OFF buttons control a real hardware LED
  *
  * Demonstrates Cy_GPIO_Clr() (LED ON, active LOW) and Cy_GPIO_Set()
  * (LED OFF) with an LVGL LED widget as visual indicator.
  *
- * Hardware: CYBSP_USER_LED1 — P10.7 (active LOW)
+ * Hardware: CYBSP_USER_LED1 - P10.7 (active LOW)
  *
  * @board  AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  */

@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Camera Preview Placeholder — UI mockup for camera viewfinder
+ * @brief   Camera Preview Placeholder - UI mockup for camera viewfinder
  *
  * @description
  *   Camera preview placeholder UI demonstrating what a viewfinder interface
@@ -161,7 +161,7 @@ void example_main(lv_obj_t *parent)
 
     /* UI Concept banner */
     lv_obj_t *concept = lv_label_create(parent);
-    lv_label_set_text(concept, LV_SYMBOL_WARNING " UI Concept — camera hardware not yet available via IPC");
+    lv_label_set_text(concept, LV_SYMBOL_WARNING " UI Concept - camera hardware not yet available via IPC");
     lv_obj_set_style_text_color(concept, lv_color_hex(0xFF9800), 0);
     lv_obj_align(concept, LV_ALIGN_TOP_RIGHT, -10, 8);
 

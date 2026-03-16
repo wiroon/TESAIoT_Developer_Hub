@@ -1,12 +1,12 @@
 /**
  * @file    main_example.c
- * @brief   Button Read — Poll real hardware button SW1 with press counter
+ * @brief   Button Read - Poll real hardware button SW1 with press counter
  *
  * Uses Cy_GPIO_Read() on a 100ms LVGL timer to poll the physical
  * button state. Displays PRESSED/Released with a press counter.
  *
  * Hardware:
- *   SW1 (CYBSP_USER_BTN1) — P7.0 (active LOW, internal pull-up)
+ *   SW1 (CYBSP_USER_BTN1) - P7.0 (active LOW, internal pull-up)
  *   Note: AI Kit has 1 button (SW1). Eva Kit has SW1 + SW2.
  *
  * @board  AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)

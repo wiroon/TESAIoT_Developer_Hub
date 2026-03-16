@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   All Sensors Dashboard — BSP-guarded multi-sensor display
+ * @brief   All Sensors Dashboard - BSP-guarded multi-sensor display
  *
  * Displays all available sensor readings based on BSP feature flags.
  * Reads all data via ipc_sensorhub_snapshot().
@@ -10,7 +10,7 @@
 #include "pse84_common.h"
 
 typedef struct {
-    /* BMI270 — always available */
+    /* BMI270 - always available */
     lv_obj_t *lbl_accel;
 
 #if BSP_HAS_DPS368
@@ -135,7 +135,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_bg_opa(grid, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(grid, 0, 0);
 
-    /* BMI270 card — always present */
+    /* BMI270 card - always present */
     create_sensor_card(grid, LV_SYMBOL_REFRESH " IMU (BMI270)",
                        UI_COLOR_BMI270, &ctx.lbl_accel);
 

@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Layout & Events — Interactive Grid Menu with 11 demos
+ * @brief   Layout & Events - Interactive Grid Menu with 11 demos
  *
  * A scrollable grid of styled cards (3 columns) serves as the Home screen.
  * Tapping a card navigates to the corresponding demo page.

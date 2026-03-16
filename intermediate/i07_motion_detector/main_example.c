@@ -1,5 +1,5 @@
 /**
- * I07 — Motion Detector
+ * I07 - Motion Detector
  *
  * Detects motion from BMI270 accelerometer magnitude changes.
  * Shows alert status, motion count, and a scrollable event history log.
@@ -77,7 +77,7 @@ static void timer_cb(lv_timer_t *t)
                  (unsigned long)ctx->motion_count, (double)diff);
 
         const char *old = lv_textarea_get_text(ctx->log_area);
-        /* Limit log length — keep last portion */
+        /* Limit log length - keep last portion */
         size_t old_len = strlen(old);
         if (old_len > 2000) {
             const char *trim = old + old_len - 1500;

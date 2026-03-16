@@ -1,5 +1,5 @@
 /**
- * i11_status_panel — Production System Status Panel
+ * i11_status_panel - Production System Status Panel
  *
  * Grid of status cards showing system health: CPU load (simulated),
  * FreeRTOS heap usage, uptime, sensor availability, and WiFi state.
@@ -98,7 +98,7 @@ static void update_timer_cb(lv_timer_t *t)
 {
     (void)t;
 
-    /* CPU usage — simulated from idle tick ratio.
+    /* CPU usage - simulated from idle tick ratio.
      * In production, you would track idle task ticks vs total.
      * Here we simulate a value based on tick count modulo. */
     uint32_t ticks = xTaskGetTickCount();
@@ -125,7 +125,7 @@ static void update_timer_cb(lv_timer_t *t)
     sensorhub_snapshot_t snap;
     ipc_sensorhub_snapshot(&snap);
 
-    /* IMU (BMI270 — always available) */
+    /* IMU (BMI270 - always available) */
     if (snap.has_bmi270) {
         float ax = snap.bmi270.ax / 16384.0f;
         float ay = snap.bmi270.ay / 16384.0f;
@@ -156,7 +156,7 @@ static void update_timer_cb(lv_timer_t *t)
     lv_label_set_text_fmt(s_sensor_card.value, "%d / %d OK", sensor_count, sensor_total);
     set_indicator(&s_sensor_card, sensor_count < sensor_total ? 1 : 0);
 
-    /* WiFi — runs on CM33_NS, not directly accessible from CM55 */
+    /* WiFi - runs on CM33_NS, not directly accessible from CM55 */
     bool wifi_up = ipc_sensorhub_wifi_connected();
     lv_label_set_text(s_wifi_card.value, wifi_up ? "Connected" : "Check CM33");
     set_indicator(&s_wifi_card, wifi_up ? 0 : 1);

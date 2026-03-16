@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Sensor Push via IPC — CM33 → CM55 sensor data transfer
+ * @brief   Sensor Push via IPC - CM33 → CM55 sensor data transfer
  *
  * CM55 side: RegisterCallback receives packed sensor data from CM33,
  * stores in volatile buffer.  LVGL timer updates display from buffer.
@@ -23,7 +23,7 @@ static volatile struct {
 static lv_obj_t *s_lbl_x, *s_lbl_y, *s_lbl_z;
 static lv_obj_t *s_lbl_updates;
 
-/* ── IPC callback — runs in ISR context ──────────────────────────── */
+/* ── IPC callback - runs in ISR context ──────────────────────────── */
 static void sensor_data_cb(uint32_t *msg_ptr)
 {
     ipc_msg_t *msg = (ipc_msg_t *)msg_ptr;
@@ -38,7 +38,7 @@ static void sensor_data_cb(uint32_t *msg_ptr)
     s_rx_buf.fresh = true;
 }
 
-/* ── LVGL timer — display update at 10 Hz ────────────────────────── */
+/* ── LVGL timer - display update at 10 Hz ────────────────────────── */
 static void display_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
@@ -57,7 +57,7 @@ static void display_timer_cb(lv_timer_t *timer)
 void example_main(lv_obj_t *parent)
 {
     lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I18 — Sensor Push via IPC");
+    lv_label_set_text(title, "I18 - Sensor Push via IPC");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);

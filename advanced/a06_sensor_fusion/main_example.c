@@ -1,5 +1,5 @@
 /**
- * A05 — Sensor Fusion
+ * A05 - Sensor Fusion
  *
  * Combines accelerometer, gyroscope, and magnetometer data
  * for orientation display with complementary filter.
@@ -184,7 +184,7 @@ void example_main(lv_obj_t *parent)
 
     /* Title */
     lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, LV_SYMBOL_GPS " Sensor Fusion — 9-DOF AHRS");
+    lv_label_set_text(title, LV_SYMBOL_GPS " Sensor Fusion - 9-DOF AHRS");
     lv_obj_set_style_text_color(title, UI_COLOR_TEXT, 0);
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_pos(title, 14, 8);

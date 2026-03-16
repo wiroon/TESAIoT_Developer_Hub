@@ -42,7 +42,7 @@ static float calc_dew_point(float temp_c, float rh_pct)
 
 static float calc_heat_index(float temp_c, float rh_pct)
 {
-    /* Rothfusz regression (NWS) — works for T >= 80 F and RH >= 40%.
+    /* Rothfusz regression (NWS) - works for T >= 80 F and RH >= 40%.
      * Below thresholds, return simple temperature. */
     float tf = temp_c * 9.0f / 5.0f + 32.0f; /* Celsius to Fahrenheit */
     if (tf < 80.0f || rh_pct < 40.0f) return temp_c;

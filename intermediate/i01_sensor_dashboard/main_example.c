@@ -22,7 +22,7 @@
 #include <limits.h>
 
 /*******************************************************************************
- * Constants — chart and layout
+ * Constants - chart and layout
  ******************************************************************************/
 #define CHART_POINTS         36     /* Data points per series                 */
 #define CHART_HEIGHT        110     /* Chart widget height in pixels          */
@@ -47,7 +47,7 @@
     + (BSP_HAS_CAPSENSE))
 
 /*******************************************************************************
- * Module-Static Context — all widget pointers in a single struct
+ * Module-Static Context - all widget pointers in a single struct
  ******************************************************************************/
 typedef struct {
     /* Sensor labels */
@@ -91,7 +91,7 @@ static char s_controls_buf[96];
 static char s_status_buf[64];
 
 /*******************************************************************************
- * autoscale_chart — scan 3 series data arrays and adjust Y-axis range
+ * autoscale_chart - scan 3 series data arrays and adjust Y-axis range
  *
  * Finds the global min/max across all data points in all 3 series, then sets
  * the chart Y range with 10% padding on each side. If the actual data range
@@ -152,7 +152,7 @@ static void autoscale_chart(lv_obj_t *chart,
 }
 
 /*******************************************************************************
- * style_chart — configure chart appearance (line type, no dots, dark bg)
+ * style_chart - configure chart appearance (line type, no dots, dark bg)
  ******************************************************************************/
 static void style_chart(lv_obj_t *chart)
 {
@@ -172,7 +172,7 @@ static void style_chart(lv_obj_t *chart)
 }
 
 /*******************************************************************************
- * make_sensor_card — create a titled card with accent border and value label
+ * make_sensor_card - create a titled card with accent border and value label
  ******************************************************************************/
 static lv_obj_t *make_sensor_card(lv_obj_t *parent, const char *title,
                                   int w, lv_color_t accent,
@@ -191,7 +191,7 @@ static lv_obj_t *make_sensor_card(lv_obj_t *parent, const char *title,
     /* Card title */
     example_label_create(card, title, &lv_font_montserrat_14, accent);
 
-    /* Value label — caller updates this in timer callback */
+    /* Value label - caller updates this in timer callback */
     lv_obj_t *lbl = lv_label_create(card);
     lv_label_set_text(lbl, "---");
     lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
@@ -204,7 +204,7 @@ static lv_obj_t *make_sensor_card(lv_obj_t *parent, const char *title,
 }
 
 /*******************************************************************************
- * Timer callback — 10 Hz sensor update with change-gated rendering
+ * Timer callback - 10 Hz sensor update with change-gated rendering
  ******************************************************************************/
 static void dashboard_timer_cb(lv_timer_t *t)
 {
@@ -216,7 +216,7 @@ static void dashboard_timer_cb(lv_timer_t *t)
     bool any_update = false;
 
     /*
-     * BMI270 — Accelerometer + Gyroscope
+     * BMI270 - Accelerometer + Gyroscope
      * Change-gated: only touch widgets when bmi270_changed is set.
      * The snapshot clears change flags after read, so consecutive calls
      * without new IPC data will skip this block entirely.
@@ -259,7 +259,7 @@ static void dashboard_timer_cb(lv_timer_t *t)
     }
 
     /*
-     * DPS368 — Barometric Pressure (AI Kit only)
+     * DPS368 - Barometric Pressure (AI Kit only)
      * Derives: altitude (hypsometric), dew point (Magnus), heat index, comfort.
      */
 #if BSP_HAS_DPS368
@@ -321,7 +321,7 @@ static void dashboard_timer_cb(lv_timer_t *t)
 #endif /* BSP_HAS_DPS368 */
 
     /*
-     * SHT40 — Humidity + Temperature (AI Kit only)
+     * SHT40 - Humidity + Temperature (AI Kit only)
      */
 #if BSP_HAS_SHT40
     if (snap.has_sht40 && snap.sht40_changed && s_ctx.env_label) {
@@ -337,7 +337,7 @@ static void dashboard_timer_cb(lv_timer_t *t)
 #endif /* BSP_HAS_SHT40 */
 
     /*
-     * CapSense — Touch Buttons + Slider (Eva Kit only)
+     * CapSense - Touch Buttons + Slider (Eva Kit only)
      */
 #if BSP_HAS_CAPSENSE
     if (snap.has_capsense && snap.capsense_changed && s_ctx.controls_label) {
@@ -362,7 +362,7 @@ static void dashboard_timer_cb(lv_timer_t *t)
 }
 
 /*******************************************************************************
- * example_main — entry point called by the example framework
+ * example_main - entry point called by the example framework
  ******************************************************************************/
 void example_main(lv_obj_t *parent)
 {
@@ -403,7 +403,7 @@ void example_main(lv_obj_t *parent)
     /* Compute card width: distribute evenly across available width */
     int card_w = (DISPLAY_WIDTH - 16 - (_CARD_COUNT - 1) * 6) / _CARD_COUNT;
 
-    /* BMI270 card — always present on all boards */
+    /* BMI270 card - always present on all boards */
     make_sensor_card(card_row, "BMI270", card_w,
                      UI_COLOR_BMI270, &s_ctx.imu_label);
 

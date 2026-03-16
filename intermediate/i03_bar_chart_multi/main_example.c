@@ -1,5 +1,5 @@
 /**
- * I03 — Multi-Series Bar Chart
+ * I03 - Multi-Series Bar Chart
  *
  * Bar chart comparing normalized sensor values side by side.
  * Each bar represents a different sensor reading scaled to 0–100.

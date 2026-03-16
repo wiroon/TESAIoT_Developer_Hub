@@ -1,5 +1,5 @@
 /**
- * I02 — Line Chart Acceleration
+ * I02 - Line Chart Acceleration
  *
  * Real-time scrolling line chart plotting BMI270 X/Y/Z acceleration.
  * 100-point history with color-coded series.

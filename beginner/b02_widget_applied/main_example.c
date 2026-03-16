@@ -1,6 +1,6 @@
 /**
  * @file    main_example.c
- * @brief   Widget Applied — Grid Menu with 10 practical widget demos
+ * @brief   Widget Applied - Grid Menu with 10 practical widget demos
  *
  * A scrollable grid of styled cards (3 columns) serves as the Home screen.
  * Tapping a card navigates to the corresponding applied widget demo.

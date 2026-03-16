@@ -1,5 +1,5 @@
 /**
- * a18_smart_watch — Multi-screen Smart Watch with Swipe Navigation
+ * a18_smart_watch - Multi-screen Smart Watch with Swipe Navigation
  *
  * Demonstrates a circular watch face with 4 swipeable screens using
  * LVGL tileview: Clock, Sensors, Steps, and Weather. Dot indicators
@@ -88,7 +88,7 @@ static void clock_timer_cb(lv_timer_t *t)
     if (g_clock_date_label) {
         static const char *days[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
         uint32_t day_idx = (total_sec / 86400) % 7;
-        lv_label_set_text_fmt(g_clock_date_label, "%s — Day %lu",
+        lv_label_set_text_fmt(g_clock_date_label, "%s - Day %lu",
                               days[day_idx], (unsigned long)(total_sec / 86400 + 1));
     }
 }
@@ -201,7 +201,6 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_bg_opa(watch, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(watch, 2, 0);
     lv_obj_set_style_border_color(watch, UI_COLOR_PRIMARY, 0);
-    lv_obj_set_style_clip_corner(watch, true, 0);
     lv_obj_set_style_pad_all(watch, 0, 0);
     lv_obj_clear_flag(watch, LV_OBJ_FLAG_SCROLLABLE);
 

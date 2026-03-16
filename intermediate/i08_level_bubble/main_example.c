@@ -1,5 +1,5 @@
 /**
- * I08 — Level Bubble
+ * I08 - Level Bubble
  *
  * 2D bubble level using BMI270 accelerometer. A circle (bubble) moves
  * on a crosshair grid based on tilt angle.
@@ -98,7 +98,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_pad_all(ctx.area, 0, 0);
     lv_obj_clear_flag(ctx.area, LV_OBJ_FLAG_SCROLLABLE);
 
-    /* Crosshair — horizontal */
+    /* Crosshair - horizontal */
     lv_obj_t *ch_h = lv_obj_create(ctx.area);
     lv_obj_set_size(ch_h, AREA_W - 20, 1);
     lv_obj_set_pos(ch_h, 10, AREA_H / 2);
@@ -106,7 +106,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_bg_opa(ch_h, LV_OPA_50, 0);
     lv_obj_set_style_border_width(ch_h, 0, 0);
 
-    /* Crosshair — vertical */
+    /* Crosshair - vertical */
     lv_obj_t *ch_v = lv_obj_create(ctx.area);
     lv_obj_set_size(ch_v, 1, AREA_H - 20);
     lv_obj_set_pos(ch_v, AREA_W / 2, 10);

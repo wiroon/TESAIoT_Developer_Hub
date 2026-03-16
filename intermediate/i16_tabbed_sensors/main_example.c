@@ -1,5 +1,5 @@
 /**
- * I16 — Tabbed Sensors
+ * I16 - Tabbed Sensors
  *
  * Tab view where each tab shows one sensor's detailed data with
  * large readouts and auxiliary information.
@@ -144,7 +144,7 @@ void example_main(lv_obj_t *parent)
         lv_obj_set_style_pad_all(tab, 12, 0);
         lv_obj_set_style_pad_row(tab, 4, 0);
 
-        example_label_create(tab, "BMI270 — 6-Axis IMU",
+        example_label_create(tab, "BMI270 - 6-Axis IMU",
                              &lv_font_montserrat_20,
                              UI_COLOR_BMI270);
         make_data_row(tab, "Accel X:", &ctx.lbl_ax, &lv_font_montserrat_16);
@@ -164,7 +164,7 @@ void example_main(lv_obj_t *parent)
         lv_obj_set_style_pad_all(tab, 12, 0);
         lv_obj_set_style_pad_row(tab, 4, 0);
 
-        example_label_create(tab, "DPS368 — Barometer",
+        example_label_create(tab, "DPS368 - Barometer",
                              &lv_font_montserrat_20,
                              UI_COLOR_DPS368);
         make_data_row(tab, "Pressure:", &ctx.lbl_press, &lv_font_montserrat_20);
@@ -181,7 +181,7 @@ void example_main(lv_obj_t *parent)
         lv_obj_set_style_pad_all(tab, 12, 0);
         lv_obj_set_style_pad_row(tab, 4, 0);
 
-        example_label_create(tab, "SHT40 — Temp & Humidity",
+        example_label_create(tab, "SHT40 - Temp & Humidity",
                              &lv_font_montserrat_20,
                              UI_COLOR_SHT40);
         make_data_row(tab, "Temperature:", &ctx.lbl_ctemp, &lv_font_montserrat_20);
@@ -200,7 +200,7 @@ void example_main(lv_obj_t *parent)
         lv_obj_set_style_pad_all(tab, 20, 0);
         lv_obj_set_style_pad_row(tab, 12, 0);
 
-        example_label_create(tab, "BMM350 — Magnetometer",
+        example_label_create(tab, "BMM350 - Magnetometer",
                              &lv_font_montserrat_20,
                              UI_COLOR_BMM350);
         ctx.lbl_hdg = example_label_create(tab, "--",

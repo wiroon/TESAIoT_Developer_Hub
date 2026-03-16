@@ -1,5 +1,5 @@
 /**
- * A04 — Certificate Viewer
+ * A04 - Certificate Viewer
  *
  * X.509 certificate chain viewer with parsed fields,
  * expiration status, and chain validation visualization.
@@ -163,7 +163,7 @@ void example_main(lv_obj_t *parent)
 
     /* UI Reference banner */
     lv_obj_t *ref_banner = lv_label_create(parent);
-    lv_label_set_text(ref_banner, LV_SYMBOL_WARNING " UI Reference — real cert parsing via IPC_CMD_HSM_READ_CERT (0xB7)");
+    lv_label_set_text(ref_banner, LV_SYMBOL_WARNING " UI Reference - real cert parsing via IPC_CMD_HSM_READ_CERT (0xB7)");
     lv_obj_set_style_text_color(ref_banner, lv_color_hex(0xFF9800), 0);
     lv_obj_set_pos(ref_banner, 16, 36);
 
