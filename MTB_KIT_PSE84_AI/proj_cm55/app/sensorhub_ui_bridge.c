@@ -9,7 +9,7 @@
  */
 
 #include "sensorhub_ui.h"
-#include "example_common.h"
+#include "pse84_common.h"
 
 /* ── Called by tesaiot_display.c after LVGL + touch are ready ──────── */
 bool sensorhub_ui_init(void *parent)

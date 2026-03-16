@@ -13,7 +13,7 @@
  *   example_main()          — Entry point: compose board info display
  */
 
-#include "example_common.h"
+#include "pse84_common.h"
 
 static lv_obj_t *s_lbl_uptime;
 
