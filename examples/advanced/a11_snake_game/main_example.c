@@ -1,18 +1,18 @@
 /**
  * @file    main_example.c
- * @brief   Snake Game — Grid-based with Joystick/Touch Control
+ * @brief   Snake Game — Pure LVGL with touch D-pad + BMI270 tilt control
  *
  * @description
- *   Classic Snake on 20x15 grid. F310 joystick + touch D-pad input.
- *   Food, growth, collision, scoring. Canvas-based rendering.
- *   Snake body as circular buffer of grid coordinates.
+ *   Classic Snake on a 20x15 grid rendered on LVGL canvas. Input via touch
+ *   D-pad buttons and BMI270 accelerometer tilt (via ipc_sensorhub_snapshot).
+ *   Food, growth, wall/self collision, score tracking. lv_timer drives the
+ *   game loop. No external game library dependencies.
  *
  * @board    AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  * @author   TESAIoT
  */
 
 #include "example_common.h"
-#include "game_common.h"
 
 /* ---------------------------------------------------------------------------
  * Constants
@@ -27,13 +27,12 @@
 #define INITIAL_SPEED   200     /* ms per tick */
 #define MIN_SPEED       80
 #define SPEED_STEP      5
+#define TILT_THRESHOLD  4096   /* raw int16 ~0.25g */
 
 #define COLOR_BG_CELL   lv_color_hex(0x0D1B2A)
-#define COLOR_GRID      lv_color_hex(0x142240)
 #define COLOR_SNAKE_HEAD lv_color_hex(0x66BB6A)
 #define COLOR_SNAKE_BODY lv_color_hex(0x388E3C)
 #define COLOR_FOOD      lv_color_hex(0xF44336)
-#define COLOR_TEXT       lv_color_hex(0xE0E0E0)
 
 typedef enum { DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT } direction_t;
 
@@ -49,30 +48,30 @@ typedef struct {
     lv_obj_t    *status_label;
     lv_obj_t    *gameover_panel;
     lv_obj_t    *final_score_label;
-    lv_obj_t    *btn_restart;
     uint8_t     *canvas_buf;
     lv_timer_t  *game_timer;
 
+    /* D-pad touch state */
+    bool         touch_up;
+    bool         touch_down;
+    bool         touch_left;
+    bool         touch_right;
+
     point_t      snake[MAX_SNAKE_LEN];
     uint16_t     snake_len;
-    uint16_t     head_idx;   /* Circular buffer head */
     uint16_t     tail_idx;
     direction_t  dir;
-    direction_t  next_dir;   /* Buffered input */
+    direction_t  next_dir;
     point_t      food;
     uint32_t     score;
     uint32_t     speed_ms;
     bool         game_over;
-    bool         started;
 } snake_ctx_t;
 
 static snake_ctx_t s_ctx;
 
-/* ---------------------------------------------------------------------------
- * Simple PRNG
- * --------------------------------------------------------------------------- */
+/* Simple PRNG */
 static uint32_t s_rng_state = 0;
-
 static uint32_t rng_next(void)
 {
     s_rng_state ^= s_rng_state << 13;
@@ -101,27 +100,26 @@ static void spawn_food(snake_ctx_t *ctx)
 {
     int attempts = 0;
     do {
-        ctx->food.x = rng_next() % GRID_W;
-        ctx->food.y = rng_next() % GRID_H;
+        ctx->food.x = (int8_t)(rng_next() % GRID_W);
+        ctx->food.y = (int8_t)(rng_next() % GRID_H);
         attempts++;
     } while (is_snake(ctx, ctx->food.x, ctx->food.y) && attempts < 1000);
 }
 
 /* ---------------------------------------------------------------------------
- * Draw the grid on canvas
+ * Render grid on canvas
  * --------------------------------------------------------------------------- */
 static void render(snake_ctx_t *ctx)
 {
-    /* Clear canvas */
     lv_canvas_fill_bg(ctx->canvas, COLOR_BG_CELL, LV_OPA_COVER);
 
-    /* Draw grid lines */
     lv_layer_t layer;
     lv_canvas_init_layer(ctx->canvas, &layer);
 
-    /* Draw food */
     lv_draw_rect_dsc_t rect;
     lv_draw_rect_dsc_init(&rect);
+
+    /* Draw food */
     rect.bg_color = COLOR_FOOD;
     rect.bg_opa   = LV_OPA_COVER;
     rect.radius   = 4;
@@ -160,14 +158,28 @@ static void game_tick(lv_timer_t *timer)
     snake_ctx_t *ctx = (snake_ctx_t *)lv_timer_get_user_data(timer);
     if (ctx->game_over) return;
 
-    /* Read input */
-    game_input_state_t input;
-    game_input_read(&input);
+    /* Read accelerometer for tilt input */
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
+    {
+        if (snap.bmi270.ax < -TILT_THRESHOLD && ctx->dir != DIR_RIGHT)
+            ctx->next_dir = DIR_LEFT;
+        else if (snap.bmi270.ax > TILT_THRESHOLD && ctx->dir != DIR_LEFT)
+            ctx->next_dir = DIR_RIGHT;
+        else if (snap.bmi270.ay < -TILT_THRESHOLD && ctx->dir != DIR_DOWN)
+            ctx->next_dir = DIR_UP;
+        else if (snap.bmi270.ay > TILT_THRESHOLD && ctx->dir != DIR_UP)
+            ctx->next_dir = DIR_DOWN;
+    }
 
-    if (input.up && ctx->dir != DIR_DOWN)        ctx->next_dir = DIR_UP;
-    else if (input.down && ctx->dir != DIR_UP)    ctx->next_dir = DIR_DOWN;
-    else if (input.left && ctx->dir != DIR_RIGHT) ctx->next_dir = DIR_LEFT;
-    else if (input.right && ctx->dir != DIR_LEFT) ctx->next_dir = DIR_RIGHT;
+    /* Read touch D-pad input (overrides tilt) */
+    if (ctx->touch_up && ctx->dir != DIR_DOWN)        ctx->next_dir = DIR_UP;
+    else if (ctx->touch_down && ctx->dir != DIR_UP)    ctx->next_dir = DIR_DOWN;
+    else if (ctx->touch_left && ctx->dir != DIR_RIGHT) ctx->next_dir = DIR_LEFT;
+    else if (ctx->touch_right && ctx->dir != DIR_LEFT) ctx->next_dir = DIR_RIGHT;
+
+    /* Clear touch state */
+    ctx->touch_up = ctx->touch_down = ctx->touch_left = ctx->touch_right = false;
 
     ctx->dir = ctx->next_dir;
 
@@ -204,7 +216,6 @@ static void game_tick(lv_timer_t *timer)
         ctx->snake_len++;
         ctx->score += 10;
 
-        /* Speed up */
         if (ctx->speed_ms > MIN_SPEED) {
             ctx->speed_ms -= SPEED_STEP;
             lv_timer_set_period(timer, ctx->speed_ms);
@@ -213,10 +224,10 @@ static void game_tick(lv_timer_t *timer)
         spawn_food(ctx);
 
         char score_str[24];
-        snprintf(score_str, sizeof(score_str), "Score: %lu", (unsigned long)ctx->score);
+        snprintf(score_str, sizeof(score_str), "Score: %lu",
+                 (unsigned long)ctx->score);
         lv_label_set_text(ctx->score_label, score_str);
     } else {
-        /* Remove tail (no growth) */
         ctx->tail_idx = (ctx->tail_idx + 1) % MAX_SNAKE_LEN;
     }
 
@@ -225,13 +236,12 @@ static void game_tick(lv_timer_t *timer)
 
 gameover:
     render(ctx);
-
-    /* Show game over panel */
     lv_obj_remove_flag(ctx->gameover_panel, LV_OBJ_FLAG_HIDDEN);
     char final[32];
     snprintf(final, sizeof(final), "Score: %lu", (unsigned long)ctx->score);
     lv_label_set_text(ctx->final_score_label, final);
     lv_label_set_text(ctx->status_label, "GAME OVER");
+    lv_obj_set_style_text_color(ctx->status_label, UI_COLOR_ERROR, 0);
 }
 
 /* ---------------------------------------------------------------------------
@@ -246,21 +256,22 @@ static void init_game(snake_ctx_t *ctx)
     ctx->score     = 0;
     ctx->speed_ms  = INITIAL_SPEED;
     ctx->game_over = false;
+    ctx->touch_up = ctx->touch_down = ctx->touch_left = ctx->touch_right = false;
 
-    /* Place snake in center */
-    int8_t start_x = GRID_W / 2 - INITIAL_LEN / 2;
-    int8_t start_y = GRID_H / 2;
+    int8_t start_x = (int8_t)(GRID_W / 2 - INITIAL_LEN / 2);
+    int8_t start_y = (int8_t)(GRID_H / 2);
 
     for (uint16_t i = 0; i < INITIAL_LEN; i++) {
-        ctx->snake[i].x = start_x + i;
+        ctx->snake[i].x = start_x + (int8_t)i;
         ctx->snake[i].y = start_y;
     }
 
-    s_rng_state = xTaskGetTickCount();
+    s_rng_state = (uint32_t)lv_tick_get();
     spawn_food(ctx);
 
     lv_label_set_text(ctx->score_label, "Score: 0");
     lv_label_set_text(ctx->status_label, "Playing");
+    lv_obj_set_style_text_color(ctx->status_label, UI_COLOR_SUCCESS, 0);
     lv_obj_add_flag(ctx->gameover_panel, LV_OBJ_FLAG_HIDDEN);
 
     if (ctx->game_timer) {
@@ -271,11 +282,39 @@ static void init_game(snake_ctx_t *ctx)
 }
 
 /* ---------------------------------------------------------------------------
- * Restart callback
+ * D-pad button callbacks
  * --------------------------------------------------------------------------- */
+static void dpad_up_cb(lv_event_t *e)    { s_ctx.touch_up = true;    (void)e; }
+static void dpad_down_cb(lv_event_t *e)  { s_ctx.touch_down = true;  (void)e; }
+static void dpad_left_cb(lv_event_t *e)  { s_ctx.touch_left = true;  (void)e; }
+static void dpad_right_cb(lv_event_t *e) { s_ctx.touch_right = true; (void)e; }
+
 static void btn_restart_cb(lv_event_t *e)
 {
+    (void)e;
     init_game(&s_ctx);
+}
+
+/* ---------------------------------------------------------------------------
+ * Helper: create a D-pad button
+ * --------------------------------------------------------------------------- */
+static lv_obj_t *create_dpad_btn(lv_obj_t *parent, const char *symbol,
+                                  lv_event_cb_t cb, int x_off, int y_off)
+{
+    lv_obj_t *btn = lv_btn_create(parent);
+    lv_obj_set_size(btn, 44, 44);
+    lv_obj_align(btn, LV_ALIGN_CENTER, x_off, y_off);
+    lv_obj_set_style_bg_color(btn, UI_COLOR_CARD_BG, 0);
+    lv_obj_set_style_radius(btn, 8, 0);
+    lv_obj_set_style_border_color(btn, UI_COLOR_INFO, 0);
+    lv_obj_set_style_border_width(btn, 1, 0);
+    lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_t *lbl = lv_label_create(btn);
+    lv_label_set_text(lbl, symbol);
+    lv_obj_center(lbl);
+
+    return btn;
 }
 
 /* ---------------------------------------------------------------------------
@@ -303,7 +342,7 @@ void example_main(lv_obj_t *parent)
     /* Status */
     s_ctx.status_label = lv_label_create(parent);
     lv_label_set_text(s_ctx.status_label, "Playing");
-    lv_obj_set_style_text_color(s_ctx.status_label, COLOR_TEXT, 0);
+    lv_obj_set_style_text_color(s_ctx.status_label, UI_COLOR_SUCCESS, 0);
     lv_obj_align(s_ctx.status_label, LV_ALIGN_TOP_MID, 0, 8);
 
     /* Canvas */
@@ -316,17 +355,37 @@ void example_main(lv_obj_t *parent)
     s_ctx.canvas = lv_canvas_create(parent);
     lv_canvas_set_buffer(s_ctx.canvas, s_ctx.canvas_buf,
                          CANVAS_W, CANVAS_H, LV_COLOR_FORMAT_RGB565);
-    lv_obj_align(s_ctx.canvas, LV_ALIGN_CENTER, 0, 16);
+    lv_obj_align(s_ctx.canvas, LV_ALIGN_LEFT_MID, 8, 16);
     lv_obj_set_style_border_color(s_ctx.canvas, lv_color_hex(0x388E3C), 0);
     lv_obj_set_style_border_width(s_ctx.canvas, 2, 0);
 
-    /* Game over panel (centered overlay) */
+    /* D-pad (right of canvas) */
+    lv_obj_t *dpad = lv_obj_create(parent);
+    lv_obj_set_size(dpad, 140, 140);
+    lv_obj_align(dpad, LV_ALIGN_RIGHT_MID, -8, 16);
+    lv_obj_set_style_bg_opa(dpad, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(dpad, 0, 0);
+    lv_obj_clear_flag(dpad, LV_OBJ_FLAG_SCROLLABLE);
+
+    create_dpad_btn(dpad, LV_SYMBOL_UP,    dpad_up_cb,    0, -48);
+    create_dpad_btn(dpad, LV_SYMBOL_DOWN,  dpad_down_cb,  0,  48);
+    create_dpad_btn(dpad, LV_SYMBOL_LEFT,  dpad_left_cb, -48,  0);
+    create_dpad_btn(dpad, LV_SYMBOL_RIGHT, dpad_right_cb, 48,  0);
+
+    /* Tilt hint */
+    lv_obj_t *tilt_hint = lv_label_create(parent);
+    lv_label_set_text(tilt_hint, "Tilt board to steer");
+    lv_obj_set_style_text_color(tilt_hint, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_text_font(tilt_hint, &lv_font_montserrat_14, 0);
+    lv_obj_align(tilt_hint, LV_ALIGN_BOTTOM_RIGHT, -16, -52);
+
+    /* Game over panel */
     s_ctx.gameover_panel = lv_obj_create(parent);
     lv_obj_set_size(s_ctx.gameover_panel, 220, 120);
-    lv_obj_align(s_ctx.gameover_panel, LV_ALIGN_CENTER, 0, 16);
+    lv_obj_align(s_ctx.gameover_panel, LV_ALIGN_CENTER, -60, 16);
     lv_obj_set_style_bg_color(s_ctx.gameover_panel, lv_color_hex(0x1A1A2E), 0);
     lv_obj_set_style_bg_opa(s_ctx.gameover_panel, LV_OPA_90, 0);
-    lv_obj_set_style_border_color(s_ctx.gameover_panel, COLOR_FOOD, 0);
+    lv_obj_set_style_border_color(s_ctx.gameover_panel, UI_COLOR_ERROR, 0);
     lv_obj_set_style_border_width(s_ctx.gameover_panel, 2, 0);
     lv_obj_set_style_radius(s_ctx.gameover_panel, 12, 0);
     lv_obj_add_flag(s_ctx.gameover_panel, LV_OBJ_FLAG_HIDDEN);
@@ -334,7 +393,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_t *go_title = lv_label_create(s_ctx.gameover_panel);
     lv_label_set_text(go_title, "GAME OVER");
     lv_obj_set_style_text_font(go_title, &lv_font_montserrat_24, 0);
-    lv_obj_set_style_text_color(go_title, COLOR_FOOD, 0);
+    lv_obj_set_style_text_color(go_title, UI_COLOR_ERROR, 0);
     lv_obj_align(go_title, LV_ALIGN_TOP_MID, 0, 8);
 
     s_ctx.final_score_label = lv_label_create(s_ctx.gameover_panel);
@@ -343,17 +402,16 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_text_color(s_ctx.final_score_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(s_ctx.final_score_label, LV_ALIGN_CENTER, 0, -4);
 
-    s_ctx.btn_restart = lv_btn_create(s_ctx.gameover_panel);
-    lv_obj_set_size(s_ctx.btn_restart, 120, 36);
-    lv_obj_align(s_ctx.btn_restart, LV_ALIGN_BOTTOM_MID, 0, -6);
-    lv_obj_set_style_bg_color(s_ctx.btn_restart, lv_color_hex(0x4CAF50), 0);
-    lv_obj_add_event_cb(s_ctx.btn_restart, btn_restart_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *rl = lv_label_create(s_ctx.btn_restart);
+    lv_obj_t *btn_restart = lv_btn_create(s_ctx.gameover_panel);
+    lv_obj_set_size(btn_restart, 120, 36);
+    lv_obj_align(btn_restart, LV_ALIGN_BOTTOM_MID, 0, -6);
+    lv_obj_set_style_bg_color(btn_restart, UI_COLOR_SUCCESS, 0);
+    lv_obj_add_event_cb(btn_restart, btn_restart_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *rl = lv_label_create(btn_restart);
     lv_label_set_text(rl, LV_SYMBOL_REFRESH " Restart");
     lv_obj_center(rl);
 
     /* Initialize and start game */
-    game_input_init();
     init_game(&s_ctx);
     s_ctx.game_timer = lv_timer_create(game_tick, INITIAL_SPEED, &s_ctx);
 }

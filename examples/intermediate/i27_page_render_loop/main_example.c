@@ -2,12 +2,11 @@
  * @file    main_example.c
  * @brief   Page Render Loop — Timer-driven render updating sensor data per frame
  *
- * 100 ms render timer reads BMI270, updates chart + labels + frame counter.
- * Demonstrates the page_dashboard render pattern.
+ * 100 ms render timer reads BMI270 accel magnitude via IPC snapshot,
+ * updates chart + labels + frame counter with FPS estimate.
  */
 
 #include "example_common.h"
-#include "sensor_bmi270.h"
 
 static lv_obj_t          *s_chart;
 static lv_chart_series_t *s_ser;
@@ -24,12 +23,16 @@ static void render_cb(lv_timer_t *timer)
 {
     (void)timer;
 
-    sensor_bmi270_data_t d;
-    if (sensor_bmi270_read(&d) != 0) return;
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
+    if (!snap.has_bmi270) return;
 
-    int32_t mag = (int32_t)(sqrtf(d.accel_x * d.accel_x +
-                                   d.accel_y * d.accel_y +
-                                   d.accel_z * d.accel_z) * 1000.0f);
+    /* Convert raw to g, then compute magnitude in milli-g */
+    float ax = snap.bmi270.ax / 16384.0f;
+    float ay = snap.bmi270.ay / 16384.0f;
+    float az = snap.bmi270.az / 16384.0f;
+
+    int32_t mag = (int32_t)(sqrtf(ax * ax + ay * ay + az * az) * 1000.0f);
 
     lv_chart_set_next_value(s_chart, s_ser, mag);
     lv_label_set_text_fmt(s_lbl_val, "|A|: %d mg", (int)mag);
@@ -56,17 +59,14 @@ void example_main(lv_obj_t *parent)
     s_fps            = 0;
     s_last_sec_tick  = xTaskGetTickCount();
 
-    lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I27 — Page Render Loop");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_t *title = example_label_create(parent,
+        "I27 \xe2\x80\x94 Page Render Loop",
+        &lv_font_montserrat_20, UI_COLOR_PRIMARY);
     lv_obj_align(title, LV_ALIGN_TOP_LEFT, 16, 4);
 
     /* FPS label */
-    s_lbl_fps = lv_label_create(parent);
-    lv_label_set_text(s_lbl_fps, "Render rate: ~0 Hz");
-    lv_obj_set_style_text_font(s_lbl_fps, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(s_lbl_fps, lv_palette_main(LV_PALETTE_GREY), 0);
+    s_lbl_fps = example_label_create(parent, "Render rate: ~0 Hz",
+        &lv_font_montserrat_14, UI_COLOR_TEXT_DIM);
     lv_obj_align(s_lbl_fps, LV_ALIGN_TOP_RIGHT, -16, 8);
 
     /* Chart: accel magnitude */
@@ -78,7 +78,7 @@ void example_main(lv_obj_t *parent)
     lv_chart_set_range(s_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 3000);
     lv_chart_set_div_line_count(s_chart, 4, 8);
     lv_obj_set_style_line_width(s_chart, 0, LV_PART_ITEMS);
-    lv_obj_set_style_bg_color(s_chart, lv_color_hex(0x142240), 0);
+    lv_obj_set_style_bg_color(s_chart, UI_COLOR_CARD_BG, 0);
     lv_obj_set_style_bg_opa(s_chart, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(s_chart, 8, 0);
     lv_obj_set_style_border_width(s_chart, 1, 0);
@@ -87,20 +87,15 @@ void example_main(lv_obj_t *parent)
                                 LV_CHART_AXIS_PRIMARY_Y);
 
     /* Value label */
-    s_lbl_val = lv_label_create(parent);
-    lv_label_set_text(s_lbl_val, "|A|: -- mg");
-    lv_obj_set_style_text_font(s_lbl_val, &lv_font_montserrat_16, 0);
-    lv_obj_set_style_text_color(s_lbl_val, lv_palette_main(LV_PALETTE_AMBER), 0);
+    s_lbl_val = example_label_create(parent, "|A|: -- mg",
+        &lv_font_montserrat_16, lv_palette_main(LV_PALETTE_AMBER));
     lv_obj_align(s_lbl_val, LV_ALIGN_BOTTOM_LEFT, 30, -10);
 
     /* Frame counter */
-    s_lbl_frame = lv_label_create(parent);
-    lv_label_set_text(s_lbl_frame, "Frame: 0");
-    lv_obj_set_style_text_font(s_lbl_frame, &lv_font_montserrat_16, 0);
-    lv_obj_set_style_text_color(s_lbl_frame, lv_palette_main(LV_PALETTE_GREEN), 0);
+    s_lbl_frame = example_label_create(parent, "Frame: 0",
+        &lv_font_montserrat_16, UI_COLOR_SUCCESS);
     lv_obj_align(s_lbl_frame, LV_ALIGN_BOTTOM_RIGHT, -30, -10);
 
-    /* Init + render timer */
-    sensor_bmi270_init();
+    /* Start render timer */
     lv_timer_create(render_cb, 100, NULL);
 }

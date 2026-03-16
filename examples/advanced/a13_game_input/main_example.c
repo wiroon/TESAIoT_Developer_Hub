@@ -86,17 +86,18 @@ static void poll_timer_cb(lv_timer_t *timer)
     int dx = 0, dy = 0;
 
     /* Read accelerometer from sensor snapshot */
-    ipc_sensorhub_snapshot_t snap;
-    if (ipc_sensorhub_snapshot(&snap) == 0) {
-        /* snap.accel_x/y are in m/s^2, typical range -10..+10 */
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
+    {
+        /* snap.bmi270.ax/y are in m/s^2, typical range -10..+10 */
         /* X-axis tilt moves character horizontally, Y-axis vertically */
-        dx = clamp_i((int)(snap.accel_x * TILT_SCALE), -SPEED_MAX, SPEED_MAX);
-        dy = clamp_i((int)(snap.accel_y * TILT_SCALE), -SPEED_MAX, SPEED_MAX);
+        dx = clamp_i((int)(snap.bmi270.ax * TILT_SCALE), -SPEED_MAX, SPEED_MAX);
+        dy = clamp_i((int)(snap.bmi270.ay * TILT_SCALE), -SPEED_MAX, SPEED_MAX);
 
         /* Show accelerometer values */
         char buf[64];
         snprintf(buf, sizeof(buf), "Accel: X=%.1f Y=%.1f Z=%.1f",
-                 snap.accel_x, snap.accel_y, snap.accel_z);
+                 snap.bmi270.ax, snap.bmi270.ay, snap.bmi270.az);
         lv_label_set_text(ctx->accel_label, buf);
     }
 

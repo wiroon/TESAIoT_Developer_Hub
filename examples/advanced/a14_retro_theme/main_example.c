@@ -1,59 +1,181 @@
 /**
  * @file    main_example.c
- * @brief   Retro Game Boy Theme — 4-tone palette + CRT scanlines
+ * @brief   Retro Terminal Dashboard — Green-on-black CRT aesthetic
  *
  * @description
- *   Game Boy 4-tone green palette, CRT scanline effect on canvas,
- *   "DOT MATRIX WITH STEREO SOUND" badge. Reusable theme module.
- *   Colors: lightest=#9BBC0F, light=#8BAC0F, dark=#306230, darkest=#0F380F
+ *   Retro-styled sensor dashboard with green-on-black terminal aesthetic,
+ *   CRT scanline effect, pixelated header, blinking cursor, and classic
+ *   4-tone Game Boy color palette. Reads live sensor data via
+ *   ipc_sensorhub_snapshot and displays in terminal-style formatted output.
  *
  * @board    AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  * @author   TESAIoT
  */
 
 #include "example_common.h"
-#include "game_common.h"
 
 /* ---------------------------------------------------------------------------
- * Game Boy Palette
+ * Game Boy / CRT Palette
  * --------------------------------------------------------------------------- */
 #define GB_LIGHTEST     lv_color_hex(0x9BBC0F)
 #define GB_LIGHT        lv_color_hex(0x8BAC0F)
 #define GB_DARK         lv_color_hex(0x306230)
 #define GB_DARKEST      lv_color_hex(0x0F380F)
 
-#define SCREEN_W        400
-#define SCREEN_H        300
-#define SCANLINE_OPA    60      /* 0..255 */
+#define TERM_GREEN      lv_color_hex(0x33FF33)
+#define TERM_DIM        lv_color_hex(0x1A8C1A)
+#define TERM_BG         lv_color_hex(0x0A0A0A)
+#define TERM_BORDER     lv_color_hex(0x1A3A1A)
+
+#define SCREEN_W        440
+#define SCREEN_H        280
+#define SCANLINE_SPACING 3
+#define UPDATE_MS       1000
 
 /* ---------------------------------------------------------------------------
- * Create CRT scanline overlay on canvas
+ * Context
  * --------------------------------------------------------------------------- */
-static void create_scanline_overlay(lv_obj_t *parent, uint8_t *buf,
-                                     uint16_t w, uint16_t h)
+typedef struct {
+    lv_obj_t    *parent;
+    lv_obj_t    *terminal;
+    lv_obj_t    *cursor;
+    lv_obj_t    *time_label;
+    lv_obj_t    *uptime_label;
+    lv_obj_t    *sensor_lines[6];
+    lv_obj_t    *status_bar;
+    lv_timer_t  *update_timer;
+    lv_timer_t  *blink_timer;
+    uint32_t     tick_count;
+    bool         cursor_visible;
+} retro_ctx_t;
+
+static retro_ctx_t s_ctx;
+
+/* ---------------------------------------------------------------------------
+ * Blinking cursor timer
+ * --------------------------------------------------------------------------- */
+static void blink_timer_cb(lv_timer_t *timer)
 {
-    lv_obj_t *canvas = lv_canvas_create(parent);
-    lv_canvas_set_buffer(canvas, buf, w, h, LV_COLOR_FORMAT_RGB565);
-    lv_obj_align(canvas, LV_ALIGN_CENTER, 0, 30);
-    lv_obj_set_style_opa(canvas, SCANLINE_OPA, 0);
+    retro_ctx_t *ctx = (retro_ctx_t *)lv_timer_get_user_data(timer);
+    ctx->cursor_visible = !ctx->cursor_visible;
 
-    /* Fill transparent, then draw dark lines on even rows */
-    lv_canvas_fill_bg(canvas, lv_color_hex(0x000000), LV_OPA_TRANSP);
+    if (ctx->cursor_visible) {
+        lv_obj_set_style_bg_opa(ctx->cursor, LV_OPA_COVER, 0);
+    } else {
+        lv_obj_set_style_bg_opa(ctx->cursor, LV_OPA_TRANSP, 0);
+    }
+}
 
-    lv_layer_t layer;
-    lv_canvas_init_layer(canvas, &layer);
+/* ---------------------------------------------------------------------------
+ * Sensor update timer — reads real sensor data
+ * --------------------------------------------------------------------------- */
+static void update_timer_cb(lv_timer_t *timer)
+{
+    retro_ctx_t *ctx = (retro_ctx_t *)lv_timer_get_user_data(timer);
+    ctx->tick_count++;
 
-    lv_draw_rect_dsc_t line_dsc;
-    lv_draw_rect_dsc_init(&line_dsc);
-    line_dsc.bg_color = lv_color_hex(0x000000);
-    line_dsc.bg_opa   = LV_OPA_50;
+    /* Uptime */
+    uint32_t secs = ctx->tick_count;
+    uint32_t mins = secs / 60;
+    uint32_t hrs  = mins / 60;
+    char uptime_str[48];
+    snprintf(uptime_str, sizeof(uptime_str),
+             "> UPTIME: %02lu:%02lu:%02lu",
+             (unsigned long)hrs, (unsigned long)(mins % 60),
+             (unsigned long)(secs % 60));
+    lv_label_set_text(ctx->uptime_label, uptime_str);
 
-    for (int y = 0; y < h; y += 2) {
-        lv_area_t line = { 0, y, w - 1, y };
-        lv_draw_rect(&layer, &line_dsc, &line);
+    /* Time from NTP if available */
+    if (ipc_sensorhub_ntp_synced()) {
+        char time_str[32]; ipc_sensorhub_get_time_str(time_str, sizeof(time_str));
+        char time_buf[48];
+        snprintf(time_buf, sizeof(time_buf), "> TIME: %s",
+                 time_str ? time_str : "N/A");
+        lv_label_set_text(ctx->time_label, time_buf);
+    } else {
+        lv_label_set_text(ctx->time_label, "> TIME: [NO NTP SYNC]");
     }
 
-    lv_canvas_finish_layer(canvas, &layer);
+    /* Read sensor data */
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
+    {
+        char buf[64];
+
+        snprintf(buf, sizeof(buf), "> IMU.ACC  X:%+6.2f Y:%+6.2f Z:%+6.2f",
+                 snap.bmi270.ax, snap.bmi270.ay, snap.bmi270.az);
+        lv_label_set_text(ctx->sensor_lines[0], buf);
+
+        snprintf(buf, sizeof(buf), "> IMU.GYR  X:%+7.1f Y:%+7.1f Z:%+7.1f",
+                 snap.bmi270.gx, snap.bmi270.gy, snap.bmi270.gz);
+        lv_label_set_text(ctx->sensor_lines[1], buf);
+
+#if BSP_HAS_DPS368
+        snprintf(buf, sizeof(buf), "> BARO     P:%7.1f hPa  T:%5.1f C",
+                 snap.dps368.pressure_x100, snap.dps368.temperature_x100);
+        lv_label_set_text(ctx->sensor_lines[2], buf);
+#else
+        lv_label_set_text(ctx->sensor_lines[2], "> BARO     [NOT AVAILABLE]");
+#endif
+
+#if BSP_HAS_SHT40
+        snprintf(buf, sizeof(buf), "> CLIMATE  T:%5.1f C  H:%5.1f %%",
+                 snap.sht40.temperature_x100, snap.sht40.humidity_x100);
+        lv_label_set_text(ctx->sensor_lines[3], buf);
+#else
+        lv_label_set_text(ctx->sensor_lines[3], "> CLIMATE  [NOT AVAILABLE]");
+#endif
+
+#if BSP_HAS_BMM350
+        snprintf(buf, sizeof(buf), "> MAG      X:%+7.1f Y:%+7.1f Z:%+7.1f",
+                 snap.bmm350.mx_x100, snap.bmm350.my_x100, snap.bmm350.mz_x100);
+        lv_label_set_text(ctx->sensor_lines[4], buf);
+#else
+        lv_label_set_text(ctx->sensor_lines[4], "> MAG      [NOT AVAILABLE]");
+#endif
+
+        /* WiFi status */
+        snprintf(buf, sizeof(buf), "> WIFI     %s",
+                 ipc_sensorhub_wifi_connected() ? "CONNECTED" : "DISCONNECTED");
+        lv_label_set_text(ctx->sensor_lines[5], buf);
+        lv_obj_set_style_text_color(ctx->sensor_lines[5],
+            ipc_sensorhub_wifi_connected() ? TERM_GREEN : lv_color_hex(0xFF3333), 0);
+    }
+
+    /* Status bar blink */
+    char status[64];
+    snprintf(status, sizeof(status), " BENTO PSE84 | TICK %lu | MEM OK ",
+             (unsigned long)ctx->tick_count);
+    lv_label_set_text(ctx->status_bar, status);
+}
+
+/* ---------------------------------------------------------------------------
+ * Helper: create a terminal-style label
+ * --------------------------------------------------------------------------- */
+static lv_obj_t *term_label(lv_obj_t *parent, const char *text, int y_offset)
+{
+    lv_obj_t *lbl = lv_label_create(parent);
+    lv_label_set_text(lbl, text);
+    lv_obj_set_style_text_color(lbl, TERM_GREEN, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+    lv_obj_align(lbl, LV_ALIGN_TOP_LEFT, 12, y_offset);
+    return lbl;
+}
+
+/* ---------------------------------------------------------------------------
+ * Create scanline overlay effect
+ * --------------------------------------------------------------------------- */
+static void add_scanlines(lv_obj_t *terminal)
+{
+    for (int y = 0; y < SCREEN_H; y += SCANLINE_SPACING) {
+        lv_obj_t *line = lv_obj_create(terminal);
+        lv_obj_set_size(line, SCREEN_W - 4, 1);
+        lv_obj_set_pos(line, 2, y);
+        lv_obj_set_style_bg_color(line, lv_color_hex(0x000000), 0);
+        lv_obj_set_style_bg_opa(line, 30, 0);  /* Very subtle */
+        lv_obj_set_style_border_width(line, 0, 0);
+        lv_obj_clear_flag(line, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+    }
 }
 
 /* ---------------------------------------------------------------------------
@@ -61,118 +183,125 @@ static void create_scanline_overlay(lv_obj_t *parent, uint8_t *buf,
  * --------------------------------------------------------------------------- */
 void example_main(lv_obj_t *parent)
 {
-    /* Set parent to darkest green */
-    lv_obj_set_style_bg_color(parent, GB_DARKEST, 0);
+    memset(&s_ctx, 0, sizeof(s_ctx));
+    s_ctx.parent = parent;
+
+    /* Set parent background to black */
+    lv_obj_set_style_bg_color(parent, TERM_BG, 0);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, 0);
 
-    /* === DOT MATRIX Badge (top) === */
+    /* === CRT Badge (top) === */
     lv_obj_t *badge = lv_obj_create(parent);
-    lv_obj_set_size(badge, 380, 32);
-    lv_obj_align(badge, LV_ALIGN_TOP_MID, 0, 8);
+    lv_obj_set_size(badge, SCREEN_W, 28);
+    lv_obj_align(badge, LV_ALIGN_TOP_MID, 0, 4);
     lv_obj_set_style_bg_color(badge, GB_DARKEST, 0);
+    lv_obj_set_style_bg_opa(badge, LV_OPA_COVER, 0);
     lv_obj_set_style_border_color(badge, GB_DARK, 0);
-    lv_obj_set_style_border_width(badge, 2, 0);
-    lv_obj_set_style_border_side(badge, LV_BORDER_SIDE_FULL, 0);
-    lv_obj_set_style_radius(badge, 4, 0);
+    lv_obj_set_style_border_width(badge, 1, 0);
+    lv_obj_set_style_radius(badge, 2, 0);
+    lv_obj_clear_flag(badge, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t *badge_text = lv_label_create(badge);
-    lv_label_set_text(badge_text, "DOT MATRIX WITH STEREO SOUND");
+    lv_label_set_text(badge_text, "BENTO RETRO TERMINAL v1.0");
     lv_obj_set_style_text_color(badge_text, GB_LIGHTEST, 0);
     lv_obj_set_style_text_letter_space(badge_text, 2, 0);
     lv_obj_center(badge_text);
 
-    /* === Game Screen Area (simulated GB screen) === */
-    lv_obj_t *screen_bezel = lv_obj_create(parent);
-    lv_obj_set_size(screen_bezel, SCREEN_W + 16, SCREEN_H + 16);
-    lv_obj_align(screen_bezel, LV_ALIGN_CENTER, 0, 30);
-    lv_obj_set_style_bg_color(screen_bezel, GB_DARK, 0);
-    lv_obj_set_style_radius(screen_bezel, 8, 0);
-    lv_obj_set_style_border_width(screen_bezel, 0, 0);
+    /* === Terminal screen area === */
+    lv_obj_t *bezel = lv_obj_create(parent);
+    lv_obj_set_size(bezel, SCREEN_W + 12, SCREEN_H + 12);
+    lv_obj_align(bezel, LV_ALIGN_CENTER, 0, 10);
+    lv_obj_set_style_bg_color(bezel, lv_color_hex(0x1A1A1A), 0);
+    lv_obj_set_style_bg_opa(bezel, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(bezel, 6, 0);
+    lv_obj_set_style_border_color(bezel, TERM_BORDER, 0);
+    lv_obj_set_style_border_width(bezel, 2, 0);
+    lv_obj_clear_flag(bezel, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t *screen = lv_obj_create(screen_bezel);
-    lv_obj_set_size(screen, SCREEN_W, SCREEN_H);
-    lv_obj_center(screen);
-    lv_obj_set_style_bg_color(screen, GB_LIGHTEST, 0);
-    lv_obj_set_style_radius(screen, 2, 0);
-    lv_obj_set_style_border_width(screen, 0, 0);
-    lv_obj_set_style_pad_all(screen, 16, 0);
+    s_ctx.terminal = lv_obj_create(bezel);
+    lv_obj_set_size(s_ctx.terminal, SCREEN_W, SCREEN_H);
+    lv_obj_center(s_ctx.terminal);
+    lv_obj_set_style_bg_color(s_ctx.terminal, TERM_BG, 0);
+    lv_obj_set_style_bg_opa(s_ctx.terminal, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(s_ctx.terminal, 2, 0);
+    lv_obj_set_style_border_width(s_ctx.terminal, 0, 0);
+    lv_obj_clear_flag(s_ctx.terminal, LV_OBJ_FLAG_SCROLLABLE);
 
-    /* --- Demo content inside screen --- */
-    /* Title */
-    lv_obj_t *game_title = lv_label_create(screen);
-    lv_label_set_text(game_title, "RETRO THEME");
-    lv_obj_set_style_text_font(game_title, &lv_font_montserrat_24, 0);
-    lv_obj_set_style_text_color(game_title, GB_DARKEST, 0);
-    lv_obj_align(game_title, LV_ALIGN_TOP_MID, 0, 0);
+    /* Terminal content */
+    int y = 8;
+    lv_obj_t *header = term_label(s_ctx.terminal,
+        "=== BENTO PSE84 SENSOR TERMINAL ===", y);
+    lv_obj_set_style_text_color(header, TERM_DIM, 0);
+    y += 20;
 
-    /* Palette swatches */
-    static const struct { lv_color_t color; const char *name; } palette[] = {
-        { {0}, "Lightest #9BBC0F" },
-        { {0}, "Light    #8BAC0F" },
-        { {0}, "Dark     #306230" },
-        { {0}, "Darkest  #0F380F" },
-    };
+    lv_obj_t *sep1 = term_label(s_ctx.terminal,
+        "----------------------------------------", y);
+    lv_obj_set_style_text_color(sep1, TERM_BORDER, 0);
+    y += 18;
 
-    lv_color_t colors[] = { GB_LIGHTEST, GB_LIGHT, GB_DARK, GB_DARKEST };
+    s_ctx.time_label = term_label(s_ctx.terminal, "> TIME: [SYNCING...]", y);
+    y += 18;
 
-    for (int i = 0; i < 4; i++) {
-        int y_off = 40 + i * 40;
+    s_ctx.uptime_label = term_label(s_ctx.terminal, "> UPTIME: 00:00:00", y);
+    y += 22;
 
-        /* Color swatch */
-        lv_obj_t *swatch = lv_obj_create(screen);
-        lv_obj_set_size(swatch, 40, 30);
-        lv_obj_align(swatch, LV_ALIGN_TOP_LEFT, 0, y_off);
-        lv_obj_set_style_bg_color(swatch, colors[i], 0);
-        lv_obj_set_style_bg_opa(swatch, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_color(swatch, GB_DARKEST, 0);
-        lv_obj_set_style_border_width(swatch, 1, 0);
-        lv_obj_set_style_radius(swatch, 4, 0);
+    lv_obj_t *sep2 = term_label(s_ctx.terminal,
+        "--- SENSOR READINGS ---", y);
+    lv_obj_set_style_text_color(sep2, TERM_DIM, 0);
+    y += 18;
 
-        /* Label */
-        lv_obj_t *lbl = lv_label_create(screen);
-        lv_label_set_text(lbl, palette[i].name);
-        lv_obj_set_style_text_color(lbl, GB_DARKEST, 0);
-        lv_obj_align(lbl, LV_ALIGN_TOP_LEFT, 50, y_off + 6);
+    for (int i = 0; i < 6; i++) {
+        s_ctx.sensor_lines[i] = term_label(s_ctx.terminal, "> ...", y);
+        y += 18;
     }
 
-    /* Demo button in retro style */
-    lv_obj_t *btn = lv_btn_create(screen);
-    lv_obj_set_size(btn, 120, 40);
-    lv_obj_align(btn, LV_ALIGN_TOP_RIGHT, 0, 60);
-    lv_obj_set_style_bg_color(btn, GB_DARK, 0);
-    lv_obj_set_style_radius(btn, 4, 0);
-    lv_obj_set_style_border_color(btn, GB_DARKEST, 0);
-    lv_obj_set_style_border_width(btn, 2, 0);
-    lv_obj_set_style_shadow_width(btn, 4, 0);
-    lv_obj_set_style_shadow_color(btn, GB_DARKEST, 0);
+    /* Blinking cursor */
+    y += 4;
+    lv_obj_t *prompt = term_label(s_ctx.terminal, ">", y);
+    (void)prompt;
 
-    lv_obj_t *btn_lbl = lv_label_create(btn);
-    lv_label_set_text(btn_lbl, "START");
-    lv_obj_set_style_text_color(btn_lbl, GB_LIGHTEST, 0);
-    lv_obj_center(btn_lbl);
+    s_ctx.cursor = lv_obj_create(s_ctx.terminal);
+    lv_obj_set_size(s_ctx.cursor, 8, 14);
+    lv_obj_set_pos(s_ctx.cursor, 24, y);
+    lv_obj_set_style_bg_color(s_ctx.cursor, TERM_GREEN, 0);
+    lv_obj_set_style_bg_opa(s_ctx.cursor, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(s_ctx.cursor, 0, 0);
+    lv_obj_set_style_radius(s_ctx.cursor, 1, 0);
+    lv_obj_clear_flag(s_ctx.cursor, LV_OBJ_FLAG_SCROLLABLE);
 
-    /* Demo bar in retro style */
-    lv_obj_t *bar = lv_bar_create(screen);
-    lv_obj_set_size(bar, 120, 16);
-    lv_obj_align(bar, LV_ALIGN_TOP_RIGHT, 0, 120);
-    lv_obj_set_style_bg_color(bar, GB_LIGHT, 0);
-    lv_obj_set_style_bg_color(bar, GB_DARK, LV_PART_INDICATOR);
-    lv_obj_set_style_radius(bar, 2, 0);
-    lv_obj_set_style_radius(bar, 2, LV_PART_INDICATOR);
-    lv_bar_set_value(bar, 65, LV_ANIM_OFF);
+    /* Scanline overlay */
+    add_scanlines(s_ctx.terminal);
 
-    lv_obj_t *bar_lbl = lv_label_create(screen);
-    lv_label_set_text(bar_lbl, "HP: 65/100");
-    lv_obj_set_style_text_color(bar_lbl, GB_DARKEST, 0);
-    lv_obj_align(bar_lbl, LV_ALIGN_TOP_RIGHT, 0, 140);
+    /* === Status bar (bottom) === */
+    lv_obj_t *status_bar_bg = lv_obj_create(parent);
+    lv_obj_set_size(status_bar_bg, SCREEN_W + 12, 24);
+    lv_obj_align(status_bar_bg, LV_ALIGN_BOTTOM_MID, 0, -4);
+    lv_obj_set_style_bg_color(status_bar_bg, GB_DARK, 0);
+    lv_obj_set_style_bg_opa(status_bar_bg, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(status_bar_bg, 2, 0);
+    lv_obj_set_style_border_width(status_bar_bg, 0, 0);
+    lv_obj_clear_flag(status_bar_bg, LV_OBJ_FLAG_SCROLLABLE);
 
-    /* Demo text */
-    lv_obj_t *flavor = lv_label_create(screen);
-    lv_label_set_text(flavor, "Press START to begin\nyour adventure!");
-    lv_obj_set_style_text_color(flavor, GB_DARK, 0);
-    lv_obj_align(flavor, LV_ALIGN_BOTTOM_MID, 0, 0);
+    s_ctx.status_bar = lv_label_create(status_bar_bg);
+    lv_label_set_text(s_ctx.status_bar, " BENTO PSE84 | TICK 0 | MEM OK ");
+    lv_obj_set_style_text_color(s_ctx.status_bar, GB_LIGHTEST, 0);
+    lv_obj_set_style_text_font(s_ctx.status_bar, &lv_font_montserrat_14, 0);
+    lv_obj_center(s_ctx.status_bar);
 
-    /* === CRT Scanline Overlay === */
-    static uint8_t scanline_buf[SCREEN_W * SCREEN_H * 2];
-    create_scanline_overlay(parent, scanline_buf, SCREEN_W, SCREEN_H);
+    /* === Game Boy palette swatches (bottom corners) === */
+    lv_color_t gb_colors[] = { GB_LIGHTEST, GB_LIGHT, GB_DARK, GB_DARKEST };
+    for (int i = 0; i < 4; i++) {
+        lv_obj_t *swatch = lv_obj_create(parent);
+        lv_obj_set_size(swatch, 16, 16);
+        lv_obj_align(swatch, LV_ALIGN_BOTTOM_LEFT, 8 + i * 20, -6);
+        lv_obj_set_style_bg_color(swatch, gb_colors[i], 0);
+        lv_obj_set_style_bg_opa(swatch, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(swatch, 2, 0);
+        lv_obj_set_style_border_width(swatch, 0, 0);
+        lv_obj_clear_flag(swatch, LV_OBJ_FLAG_SCROLLABLE);
+    }
+
+    /* Start timers */
+    s_ctx.update_timer = lv_timer_create(update_timer_cb, UPDATE_MS, &s_ctx);
+    s_ctx.blink_timer = lv_timer_create(blink_timer_cb, 500, &s_ctx);
 }

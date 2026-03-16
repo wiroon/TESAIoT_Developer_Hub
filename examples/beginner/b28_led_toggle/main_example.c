@@ -1,59 +1,48 @@
 /**
  * @file    main_example.c
- * @brief   LED Toggle — Single button toggles hardware and virtual LED
+ * @brief   LED Toggle — Single button toggles virtual LED state
  *
- * Each click toggles the LED state. Virtual LED and label stay in sync.
+ * Each click toggles the lv_led widget between on and off.
+ * Demonstrates state tracking with a boolean flag.
  */
 
 #include "example_common.h"
-#include "cyhal_gpio.h"
-
-#define LED_PIN P13_7
 
 typedef struct {
     lv_obj_t *led_widget;
     lv_obj_t *lbl_state;
     lv_obj_t *btn_label;
     bool      is_on;
-    bool      gpio_ok;
 } toggle_ctx_t;
 
 static toggle_ctx_t ctx;
 
 static void toggle_btn_cb(lv_event_t *e)
 {
-    lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_CLICKED) {
-        ctx.is_on = !ctx.is_on;
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
 
-        if (ctx.gpio_ok) {
-            cyhal_gpio_toggle(LED_PIN);
-        }
+    ctx.is_on = !ctx.is_on;
 
-        if (ctx.is_on) {
-            lv_led_on(ctx.led_widget);
-            lv_label_set_text(ctx.lbl_state, "State: ON");
-            lv_label_set_text(ctx.btn_label, LV_SYMBOL_POWER " Turn OFF");
-            lv_obj_set_style_text_color(ctx.lbl_state, lv_palette_main(LV_PALETTE_GREEN), 0);
-        } else {
-            lv_led_off(ctx.led_widget);
-            lv_label_set_text(ctx.lbl_state, "State: OFF");
-            lv_label_set_text(ctx.btn_label, LV_SYMBOL_POWER " Turn ON");
-            lv_obj_set_style_text_color(ctx.lbl_state, lv_palette_main(LV_PALETTE_RED), 0);
-        }
+    if (ctx.is_on) {
+        lv_led_on(ctx.led_widget);
+        lv_label_set_text(ctx.lbl_state, "State: ON");
+        lv_label_set_text(ctx.btn_label, LV_SYMBOL_POWER " Turn OFF");
+        lv_obj_set_style_text_color(ctx.lbl_state, UI_COLOR_SUCCESS, 0);
+    } else {
+        lv_led_off(ctx.led_widget);
+        lv_label_set_text(ctx.lbl_state, "State: OFF");
+        lv_label_set_text(ctx.btn_label, LV_SYMBOL_POWER " Turn ON");
+        lv_obj_set_style_text_color(ctx.lbl_state, UI_COLOR_ERROR, 0);
     }
 }
 
 void example_main(lv_obj_t *parent)
 {
     ctx.is_on = false;
-    ctx.gpio_ok = (cyhal_gpio_init(LED_PIN, CYHAL_GPIO_DIR_OUTPUT,
-                                    CYHAL_GPIO_DRIVE_STRONG, false) == CY_RSLT_SUCCESS);
 
     /* Title */
-    lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "LED Toggle");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
+    lv_obj_t *title = example_label_create(parent, "LED Toggle",
+                                            &lv_font_montserrat_20, UI_COLOR_TEXT);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
 
     /* Virtual LED */
@@ -74,9 +63,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_center(ctx.btn_label);
 
     /* State label */
-    ctx.lbl_state = lv_label_create(parent);
-    lv_label_set_text(ctx.lbl_state, "State: OFF");
-    lv_obj_set_style_text_font(ctx.lbl_state, &lv_font_montserrat_16, 0);
-    lv_obj_set_style_text_color(ctx.lbl_state, lv_palette_main(LV_PALETTE_RED), 0);
+    ctx.lbl_state = example_label_create(parent, "State: OFF",
+                                          &lv_font_montserrat_16, UI_COLOR_ERROR);
     lv_obj_align(ctx.lbl_state, LV_ALIGN_CENTER, 0, 100);
 }

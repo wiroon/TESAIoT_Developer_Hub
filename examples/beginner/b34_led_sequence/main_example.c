@@ -1,25 +1,22 @@
 /**
  * @file    main_example.c
- * @brief   LED Sequence — Knight Rider bounce with timer state machine
+ * @brief   LED Sequence — Knight Rider bounce animation with lv_led
  *
- * Three LEDs animate in a bouncing sequence: R-G-B-G-R.
- * Speed buttons control the animation rate.
+ * Three virtual LEDs animate in a bouncing sequence: R-G-B-G-R.
+ * Speed buttons control the animation rate via lv_timer.
  */
 
 #include "example_common.h"
-#include "cyhal_gpio.h"
 
 #define NUM_SEQ_LEDS 3
 
 typedef struct {
-    lv_obj_t     *leds[NUM_SEQ_LEDS];
-    cyhal_gpio_t  pins[NUM_SEQ_LEDS];
-    bool          gpio_ok;
-    int           current;
-    int           direction;  /* +1 or -1 */
-    lv_timer_t   *timer;
-    lv_obj_t     *lbl_speed;
-    uint32_t      period_ms;
+    lv_obj_t   *leds[NUM_SEQ_LEDS];
+    int         current;
+    int         direction;  /* +1 or -1 */
+    lv_timer_t *timer;
+    lv_obj_t   *lbl_speed;
+    uint32_t    period_ms;
 } seq_ctx_t;
 
 static seq_ctx_t ctx;
@@ -34,9 +31,8 @@ static void seq_timer_cb(lv_timer_t *timer)
 
     /* Turn off current LED */
     lv_led_off(c->leds[c->current]);
-    if (c->gpio_ok) cyhal_gpio_write(c->pins[c->current], false);
 
-    /* Advance */
+    /* Advance with bounce */
     c->current += c->direction;
     if (c->current >= NUM_SEQ_LEDS) {
         c->current = NUM_SEQ_LEDS - 2;
@@ -48,7 +44,6 @@ static void seq_timer_cb(lv_timer_t *timer)
 
     /* Turn on new LED */
     lv_led_on(c->leds[c->current]);
-    if (c->gpio_ok) cyhal_gpio_write(c->pins[c->current], true);
 }
 
 static void faster_cb(lv_event_t *e)
@@ -76,23 +71,10 @@ void example_main(lv_obj_t *parent)
     ctx.current = 0;
     ctx.direction = 1;
     ctx.period_ms = 200;
-    ctx.pins[0] = P13_4;
-    ctx.pins[1] = P13_5;
-    ctx.pins[2] = P13_6;
-
-    /* Init GPIOs */
-    ctx.gpio_ok = true;
-    for (int i = 0; i < NUM_SEQ_LEDS; i++) {
-        if (cyhal_gpio_init(ctx.pins[i], CYHAL_GPIO_DIR_OUTPUT,
-                            CYHAL_GPIO_DRIVE_STRONG, false) != CY_RSLT_SUCCESS) {
-            ctx.gpio_ok = false;
-        }
-    }
 
     /* Title */
-    lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "LED Sequence");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
+    lv_obj_t *title = example_label_create(parent, "LED Sequence",
+                                            &lv_font_montserrat_20, UI_COLOR_TEXT);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
 
     /* LED row */
@@ -100,7 +82,8 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_size(row, 500, 120);
     lv_obj_align(row, LV_ALIGN_CENTER, 0, -30);
     lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_EVENLY,
+                          LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(row, 0, 0);
 
@@ -113,9 +96,8 @@ void example_main(lv_obj_t *parent)
     lv_led_on(ctx.leds[0]);  /* Start with first LED on */
 
     /* Speed label */
-    ctx.lbl_speed = lv_label_create(parent);
-    lv_label_set_text_fmt(ctx.lbl_speed, "Speed: %"PRIu32"ms", ctx.period_ms);
-    lv_obj_set_style_text_font(ctx.lbl_speed, &lv_font_montserrat_16, 0);
+    ctx.lbl_speed = example_label_create(parent, "Speed: 200ms",
+                                          &lv_font_montserrat_16, UI_COLOR_TEXT);
     lv_obj_align(ctx.lbl_speed, LV_ALIGN_CENTER, 0, 40);
 
     /* Speed controls */

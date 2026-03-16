@@ -1,14 +1,12 @@
 /**
  * @file    main_example.c
- * @brief   Tilt Display — Roll/Pitch from BMI270 accel as dual arc gauges
+ * @brief   Tilt Display — Roll/Pitch from BMI270 accel via IPC as dual arc gauges
  *
  * Roll = atan2(ay, az), Pitch = atan2(-ax, sqrt(ay^2+az^2)).
- * Two arc gauges: green=Roll, orange=Pitch.  Range: -90° to +90°.
+ * Two arc gauges: green=Roll, orange=Pitch.  Range: -90 to +90 deg.
  */
 
 #include "example_common.h"
-#include "sensor_bmi270.h"
-#include <math.h>
 
 #define ARC_SIZE    180
 
@@ -21,21 +19,12 @@ static void create_tilt_gauge(lv_obj_t *parent, const char *title,
                                lv_obj_t **arc_out, lv_obj_t **lbl_out)
 {
     /* Card container */
-    lv_obj_t *card = lv_obj_create(parent);
-    lv_obj_set_size(card, 300, 260);
+    lv_obj_t *card = example_card_create(parent, 300, 260, UI_COLOR_CARD_BG);
     lv_obj_align(card, LV_ALIGN_CENTER, x_off, 15);
-    lv_obj_set_style_bg_color(card, lv_color_hex(0x142240), 0);
-    lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(card, 12, 0);
-    lv_obj_set_style_border_width(card, 1, 0);
-    lv_obj_set_style_border_color(card, lv_color_hex(0x2a4060), 0);
-    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
 
     /* Title */
-    lv_obj_t *lbl_t = lv_label_create(card);
-    lv_label_set_text(lbl_t, title);
-    lv_obj_set_style_text_color(lbl_t, lv_color_white(), 0);
-    lv_obj_set_style_text_font(lbl_t, &lv_font_montserrat_16, 0);
+    lv_obj_t *lbl_t = example_label_create(card, title,
+        &lv_font_montserrat_16, lv_color_white());
     lv_obj_align(lbl_t, LV_ALIGN_TOP_MID, 0, 6);
 
     /* Arc */
@@ -52,24 +41,24 @@ static void create_tilt_gauge(lv_obj_t *parent, const char *title,
     lv_obj_remove_flag(*arc_out, LV_OBJ_FLAG_CLICKABLE);
 
     /* Center value */
-    *lbl_out = lv_label_create(card);
-    lv_label_set_text(*lbl_out, "0");
-    lv_obj_set_style_text_color(*lbl_out, color, 0);
-    lv_obj_set_style_text_font(*lbl_out, &lv_font_montserrat_24, 0);
+    *lbl_out = example_label_create(card, "0",
+        &lv_font_montserrat_24, color);
     lv_obj_align(*lbl_out, LV_ALIGN_CENTER, 0, 10);
 }
 
-/* ── Timer — compute roll/pitch at 20 Hz ─────────────────────────── */
+/* ── Timer — compute roll/pitch via IPC at 20 Hz ─────────────────── */
 static void tilt_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
 
-    sensor_bmi270_data_t d;
-    if (sensor_bmi270_read(&d) != 0) return;
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
+    if (!snap.has_bmi270) return;
 
-    float ax = d.accel_x;
-    float ay = d.accel_y;
-    float az = d.accel_z;
+    /* Convert raw to g */
+    float ax = snap.bmi270.ax / 16384.0f;
+    float ay = snap.bmi270.ay / 16384.0f;
+    float az = snap.bmi270.az / 16384.0f;
 
     float roll  = atan2f(ay, az) * 180.0f / 3.14159265f;
     float pitch = atan2f(-ax, sqrtf(ay * ay + az * az)) * 180.0f / 3.14159265f;
@@ -90,17 +79,15 @@ static void tilt_timer_cb(lv_timer_t *timer)
 /* ── Entry point ─────────────────────────────────────────────────── */
 void example_main(lv_obj_t *parent)
 {
-    lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I12 — Tilt Display (Roll / Pitch)");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_t *title = example_label_create(parent,
+        "I12 \xe2\x80\x94 Tilt Display (Roll / Pitch)",
+        &lv_font_montserrat_20, UI_COLOR_PRIMARY);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
 
-    create_tilt_gauge(parent, "Roll", lv_palette_main(LV_PALETTE_GREEN),
+    create_tilt_gauge(parent, "Roll", UI_COLOR_BMI270,
                       -170, &s_arc_roll, &s_lbl_roll);
-    create_tilt_gauge(parent, "Pitch", lv_color_hex(0xFF9800),
+    create_tilt_gauge(parent, "Pitch", UI_COLOR_DPS368,
                        170, &s_arc_pitch, &s_lbl_pitch);
 
-    sensor_bmi270_init();
     lv_timer_create(tilt_timer_cb, 50, NULL);
 }

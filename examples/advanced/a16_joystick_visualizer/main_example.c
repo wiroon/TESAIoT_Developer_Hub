@@ -123,16 +123,16 @@ static void poll_timer_cb(lv_timer_t *timer)
 {
     tilt_ctx_t *ctx = (tilt_ctx_t *)lv_timer_get_user_data(timer);
 
-    ipc_sensorhub_snapshot_t snap;
+    sensorhub_snapshot_t snap;
     if (ipc_sensorhub_snapshot(&snap) != 0) return;
 
-    float ax = snap.accel_x;
-    float ay = snap.accel_y;
+    float ax = snap.bmi270.ax;
+    float ay = snap.bmi270.ay;
 
     /* Show raw values */
     char buf[64];
     snprintf(buf, sizeof(buf), "Accel: X=%+.2f Y=%+.2f Z=%+.2f",
-             ax, ay, snap.accel_z);
+             ax, ay, snap.bmi270.az);
     lv_label_set_text(ctx->accel_label, buf);
 
     /* Map raw accel to dot position */
