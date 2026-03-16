@@ -107,6 +107,9 @@
     + (BSP_HAS_CAPSENSE)                                              \
     + (BSP_HAS_POTENTIOMETER))
 
+/* ── Thai Font (Noto Sans Thai, ASCII + 0x0E00-0x0E7F) ──────────── */
+#include "lv_fonts_thai.h"
+
 /* ── Example Entry Point ──────────────────────────────────────────── */
 /**
  * Each example implements this function.
@@ -139,6 +142,32 @@ static inline lv_obj_t *example_card_create(lv_obj_t *parent, int w, int h, lv_c
 static inline lv_obj_t *example_label_create(lv_obj_t *parent, const char *text,
                                               const lv_font_t *font, lv_color_t color)
 {
+    lv_obj_t *lbl = lv_label_create(parent);
+    lv_label_set_text(lbl, text);
+    lv_obj_set_style_text_font(lbl, font, 0);
+    lv_obj_set_style_text_color(lbl, color, 0);
+    return lbl;
+}
+
+/* ── Helper: Create a Thai label (auto-selects Noto Thai font) ────── */
+/**
+ * Create a label using Noto Sans Thai font.  Supports Thai + English + symbols
+ * in one string thanks to Montserrat fallback.
+ *
+ * Usage:  thai_label(parent, "อุณหภูมิ 28.5°C", 20, UI_COLOR_TEXT);
+ *
+ * @param size  Font size: 14, 16, 20, or 28
+ */
+static inline lv_obj_t *thai_label(lv_obj_t *parent, const char *text,
+                                            int size, lv_color_t color)
+{
+    const lv_font_t *font;
+    switch (size) {
+        case 28: font = &lv_font_noto_thai_28; break;
+        case 20: font = &lv_font_noto_thai_20; break;
+        case 16: font = &lv_font_noto_thai_16; break;
+        default: font = &lv_font_noto_thai_14; break;
+    }
     lv_obj_t *lbl = lv_label_create(parent);
     lv_label_set_text(lbl, text);
     lv_obj_set_style_text_font(lbl, font, 0);
