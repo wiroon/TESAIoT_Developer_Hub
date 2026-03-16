@@ -1,0 +1,10 @@
+{
+  "title": "Progress Bar",
+  "description": "Animated progress bar that fills from 0 to 100% with color changes",
+  "difficulty": "beginner",
+  "domain": "UI Widgets",
+  "tags": ["lvgl", "bar", "timer"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": false
+}

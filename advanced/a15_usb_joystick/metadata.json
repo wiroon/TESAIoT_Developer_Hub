@@ -1,11 +1,11 @@
 {
-  "title": "USB Joystick HID Parser",
-  "description": "emUSB-Host F310 DirectInput HID report parsing: axes, buttons, D-pad with IPC bridge",
+  "title": "Virtual Joystick Visualizer",
+  "description": "Touch-based virtual joystick with dual analog sticks and button indicators using LVGL events",
   "difficulty": "advanced",
-  "domain": "usb",
+  "domain": "ui",
   "boards": ["ai_kit", "eva_kit"],
-  "tags": ["usb", "joystick", "hid", "f310", "gamepad", "ipc", "emUSB"],
-  "apis_used": ["USBH_HID_GetReport", "ipc_send_cmd", "Cy_IPC_Pipe_SendMessage"],
-  "estimated_loc": 200,
-  "source_reference": "usb_hid_joystick.h + USBH.h"
+  "tags": ["joystick", "virtual", "touch", "analog", "stick", "buttons", "ui"],
+  "apis_used": ["lv_indev_get_point", "lv_timer_create", "lv_obj_align"],
+  "estimated_loc": 220,
+  "source_reference": "example_common.h + LVGL events"
 }

@@ -1,11 +1,11 @@
 {
-  "title": "OPTIGA Trust M UID Reader",
-  "description": "Initialize OPTIGA Trust M, read UID, display hex on LVGL with IPC touch pause/resume",
+  "title": "Security Info Display",
+  "description": "OPTIGA Trust M chip overview: UID, lifecycle state, certificate slots, supported algorithms",
   "difficulty": "advanced",
   "domain": "security",
   "boards": ["ai_kit", "eva_kit"],
-  "tags": ["optiga", "trust-m", "uid", "security", "i2c", "ipc", "hsm"],
-  "apis_used": ["optiga_util_open_application", "optiga_util_read_data", "ipc_send_cmd"],
+  "tags": ["optiga", "trust-m", "uid", "security", "hsm", "info", "certificates"],
+  "apis_used": ["lv_label_create", "lv_obj_create", "lv_obj_set_flex_flow"],
   "estimated_loc": 150,
-  "source_reference": "tesaiot_optiga_trust_m.h + ipc_communication"
+  "source_reference": "example_common.h"
 }

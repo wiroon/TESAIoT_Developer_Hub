@@ -1,0 +1,11 @@
+{
+  "title": "IMU XYZ",
+  "description": "Show BMI270 accelerometer X/Y/Z values in real time",
+  "difficulty": "beginner",
+  "domain": "Sensors",
+  "tags": ["bmi270", "ipc", "timer", "accelerometer"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": true,
+  "sensors_used": ["BMI270"]
+}

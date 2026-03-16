@@ -1,11 +1,11 @@
 {
-  "title": "Unified Game Input",
-  "description": "Input abstraction layer: F310 HID joystick + touch D-pad overlay to game_input_state_t",
+  "title": "Accelerometer Game Input",
+  "description": "BMI270 accelerometer as game input: tilt board to move character, with touch D-pad fallback",
   "difficulty": "advanced",
   "domain": "game",
   "boards": ["ai_kit", "eva_kit"],
-  "tags": ["game", "input", "joystick", "touch", "hid", "dpad", "abstraction"],
-  "apis_used": ["game_input_init", "game_input_read", "ipc_send_cmd"],
-  "estimated_loc": 150,
-  "source_reference": "game_common.h + usb_hid_joystick + ipc_communication"
+  "tags": ["game", "input", "accelerometer", "bmi270", "tilt", "dpad", "sensor"],
+  "apis_used": ["ipc_sensorhub_snapshot", "lv_timer_create", "lv_obj_set_pos"],
+  "estimated_loc": 180,
+  "source_reference": "example_common.h + ipc_sensorhub"
 }

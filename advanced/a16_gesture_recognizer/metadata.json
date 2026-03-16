@@ -1,0 +1,10 @@
+{
+  "title": "Gesture Recognizer",
+  "description": "Detects 6 gestures from BMI270 IMU data using variance and threshold analysis with visual feedback",
+  "difficulty": "advanced",
+  "domain": "Embedded",
+  "tags": ["embedded", "bmi270", "analytics", "event"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": true
+}

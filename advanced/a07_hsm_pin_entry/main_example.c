@@ -1,19 +1,17 @@
 /**
  * @file    main_example.c
- * @brief   HSM PIN Entry Pad
+ * @brief   PIN Entry UI Demo
  *
  * @description
- *   Custom PIN pad: 3x4 grid (1-9, backspace, 0, submit). PIN masked with dots.
- *   SHA256(PIN) via OPTIGA Trust M compared with stored hash. 3-attempt lockout
- *   with 30s countdown timer. Max 8 digits.
+ *   Custom PIN pad UI with numeric keypad (3x4 btnmatrix), masked dot display,
+ *   local hash verification, 3-attempt lockout with 30s countdown timer.
+ *   Pure LVGL — no IPC or OPTIGA calls.
  *
  * @board    AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  * @author   TESAIoT
  */
 
 #include "example_common.h"
-#include "tesaiot_optiga_trust_m.h"
-#include "ipc_communication.h"
 
 /* ---------------------------------------------------------------------------
  * Constants
@@ -22,27 +20,33 @@
 #define PIN_MIN_LEN             4
 #define MAX_ATTEMPTS            3
 #define LOCKOUT_SECONDS         30
-#define SHA256_LEN              32
-#define IPC_CMD_TOUCH_PAUSE     0xD6
-#define IPC_CMD_TOUCH_RESUME    0xD7
 
 #define COLOR_BG                lv_color_hex(0x0D1B2A)
 #define COLOR_CARD              lv_color_hex(0x142240)
-#define COLOR_TEXT               lv_color_hex(0xE0E0E0)
-#define COLOR_SUCCESS            lv_color_hex(0x4CAF50)
-#define COLOR_ERROR              lv_color_hex(0xF44336)
-#define COLOR_WARNING            lv_color_hex(0xFF9800)
-#define COLOR_KEY_BG             lv_color_hex(0x1A3050)
-#define COLOR_KEY_PRESS          lv_color_hex(0x2196F3)
-#define COLOR_ACCENT             lv_color_hex(0x7C4DFF)
+#define COLOR_TEXT              lv_color_hex(0xE0E0E0)
+#define COLOR_SUCCESS           lv_color_hex(0x4CAF50)
+#define COLOR_ERROR             lv_color_hex(0xF44336)
+#define COLOR_WARNING           lv_color_hex(0xFF9800)
+#define COLOR_KEY_BG            lv_color_hex(0x1A3050)
+#define COLOR_KEY_PRESS         lv_color_hex(0x2196F3)
+#define COLOR_ACCENT            lv_color_hex(0x7C4DFF)
 
-/* Reference hash: SHA256("1234") for demo purposes */
-static const uint8_t STORED_PIN_HASH[SHA256_LEN] = {
-    0x03, 0xAC, 0x67, 0x42, 0x16, 0xF3, 0xE1, 0x5C,
-    0x76, 0x1E, 0xE1, 0xA5, 0xE2, 0x55, 0xF0, 0x67,
-    0x95, 0x36, 0x23, 0xC8, 0xB3, 0x88, 0xB4, 0x45,
-    0x9E, 0x13, 0xF9, 0x78, 0xD7, 0xC8, 0x46, 0xF4
-};
+/* ---------------------------------------------------------------------------
+ * Simple local hash for PIN verification (FNV-1a 32-bit)
+ * Not cryptographically secure — demo purposes only
+ * --------------------------------------------------------------------------- */
+static uint32_t fnv1a_hash(const char *data, size_t len)
+{
+    uint32_t hash = 0x811C9DC5u;
+    for (size_t i = 0; i < len; i++) {
+        hash ^= (uint8_t)data[i];
+        hash *= 0x01000193u;
+    }
+    return hash;
+}
+
+/* Pre-computed FNV-1a hash of "1234" */
+#define STORED_PIN_HASH  0x6222E842u
 
 /* ---------------------------------------------------------------------------
  * Context
@@ -78,22 +82,19 @@ static const char *btnm_map[] = {
  * --------------------------------------------------------------------------- */
 static void update_pin_display(pin_ctx_t *ctx)
 {
-    char display[PIN_MAX_LEN * 3 + 1];
-    size_t pos = 0;
-
-    for (uint8_t i = 0; i < ctx->pin_len; i++) {
-        /* Unicode bullet: UTF-8 0xE2 0x97 0x8F = ● */
-        display[pos++] = (char)0xE2;
-        display[pos++] = (char)0x97;
-        display[pos++] = (char)0x8F;
-    }
-    display[pos] = '\0';
-
     if (ctx->pin_len == 0) {
         lv_label_set_text(ctx->pin_display, "_ _ _ _");
-    } else {
-        lv_label_set_text(ctx->pin_display, display);
+        return;
     }
+
+    char display[PIN_MAX_LEN * 2 + 1];
+    size_t pos = 0;
+    for (uint8_t i = 0; i < ctx->pin_len && pos + 2 < sizeof(display); i++) {
+        if (i > 0) display[pos++] = ' ';
+        display[pos++] = '*';
+    }
+    display[pos] = '\0';
+    lv_label_set_text(ctx->pin_display, display);
 }
 
 /* ---------------------------------------------------------------------------
@@ -122,46 +123,18 @@ static void lockout_timer_cb(lv_timer_t *timer)
 }
 
 /* ---------------------------------------------------------------------------
- * Verify PIN task (runs OPTIGA in background)
+ * Verify PIN locally
  * --------------------------------------------------------------------------- */
-static void verify_pin_task(void *pvParameters)
+static void verify_pin(pin_ctx_t *ctx)
 {
-    pin_ctx_t *ctx = (pin_ctx_t *)pvParameters;
-    uint8_t digest[SHA256_LEN];
+    uint32_t hash = fnv1a_hash(ctx->pin, ctx->pin_len);
 
-    /* Pause touch for I2C */
-    ipc_send_cmd(IPC_CMD_TOUCH_PAUSE, NULL, 0);
-    vTaskDelay(pdMS_TO_TICKS(50));
-
-    /* Init OPTIGA and compute SHA256 */
-    cy_rslt_t res = tesaiot_optiga_init();
-    if (res == CY_RSLT_SUCCESS) {
-        res = tesaiot_optiga_sha256((const uint8_t *)ctx->pin, ctx->pin_len, digest);
-    }
-
-    /* Resume touch */
-    ipc_send_cmd(IPC_CMD_TOUCH_RESUME, NULL, 0);
-    vTaskDelay(pdMS_TO_TICKS(50));
-
-    lv_lock();
-
-    if (res != CY_RSLT_SUCCESS) {
-        lv_label_set_text(ctx->status_label, "OPTIGA error!");
-        lv_obj_set_style_text_color(ctx->status_label, COLOR_ERROR, 0);
-        lv_unlock();
-        vTaskDelete(NULL);
-        return;
-    }
-
-    /* Compare with stored hash */
-    bool match = (memcmp(digest, STORED_PIN_HASH, SHA256_LEN) == 0);
-
-    /* Clear PIN from memory */
+    /* Clear PIN from memory immediately */
     memset(ctx->pin, 0, sizeof(ctx->pin));
     ctx->pin_len = 0;
     update_pin_display(ctx);
 
-    if (match) {
+    if (hash == STORED_PIN_HASH) {
         ctx->attempts = 0;
         lv_label_set_text(ctx->status_label, "ACCESS GRANTED");
         lv_obj_set_style_text_color(ctx->status_label, COLOR_SUCCESS, 0);
@@ -174,7 +147,6 @@ static void verify_pin_task(void *pvParameters)
         lv_label_set_text(ctx->attempts_label, buf);
 
         if (ctx->attempts >= MAX_ATTEMPTS) {
-            /* Lockout */
             ctx->locked = true;
             ctx->lockout_remaining = LOCKOUT_SECONDS;
             lv_obj_add_flag(ctx->btnmatrix, LV_OBJ_FLAG_HIDDEN);
@@ -193,9 +165,6 @@ static void verify_pin_task(void *pvParameters)
             lv_obj_set_style_text_color(ctx->status_label, COLOR_WARNING, 0);
         }
     }
-
-    lv_unlock();
-    vTaskDelete(NULL);
 }
 
 /* ---------------------------------------------------------------------------
@@ -215,7 +184,6 @@ static void btnm_event_cb(lv_event_t *e)
     lv_obj_set_style_text_color(ctx->status_label, COLOR_TEXT, 0);
 
     if (strcmp(txt, LV_SYMBOL_BACKSPACE) == 0) {
-        /* Backspace */
         if (ctx->pin_len > 0) {
             ctx->pin_len--;
             ctx->pin[ctx->pin_len] = '\0';
@@ -223,16 +191,13 @@ static void btnm_event_cb(lv_event_t *e)
             lv_label_set_text(ctx->status_label, "Enter PIN");
         }
     } else if (strcmp(txt, LV_SYMBOL_OK) == 0) {
-        /* Submit */
         if (ctx->pin_len < PIN_MIN_LEN) {
             lv_label_set_text(ctx->status_label, "PIN too short (min 4)");
             lv_obj_set_style_text_color(ctx->status_label, COLOR_WARNING, 0);
             return;
         }
-        lv_label_set_text(ctx->status_label, "Verifying...");
-        xTaskCreate(verify_pin_task, "pin_verify", 4096, ctx, 3, NULL);
+        verify_pin(ctx);
     } else {
-        /* Digit */
         if (ctx->pin_len < PIN_MAX_LEN) {
             ctx->pin[ctx->pin_len] = txt[0];
             ctx->pin_len++;
@@ -251,7 +216,6 @@ void example_main(lv_obj_t *parent)
     memset(&s_ctx, 0, sizeof(s_ctx));
     s_ctx.parent = parent;
 
-    /* Background */
     lv_obj_set_style_bg_color(parent, COLOR_BG, 0);
 
     /* Title */

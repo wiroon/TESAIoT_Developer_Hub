@@ -1,0 +1,10 @@
+{
+  "title": "Switch Toggle",
+  "description": "On/Off switch that changes a color indicator between green and red",
+  "difficulty": "beginner",
+  "domain": "UI Widgets",
+  "tags": ["lvgl", "switch", "event"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": false
+}

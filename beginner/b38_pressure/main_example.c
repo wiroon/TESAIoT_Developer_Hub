@@ -1,21 +1,20 @@
 /**
  * @file    main_example.c
- * @brief   Pressure Bar — DPS368 atmospheric pressure display
+ * @brief   Pressure Bar — DPS368 atmospheric pressure via IPC sensorhub
  *
- * Reads DPS368 pressure every 500ms. Displayed as a bar widget
- * with numeric value. AI Kit only (BSP_HAS_DPS368).
+ * Reads DPS368 pressure every 500ms using ipc_sensorhub_snapshot().
+ * Displayed as a bar widget with numeric value and status.
+ * AI Kit only (BSP_HAS_DPS368).
  */
 
 #include "example_common.h"
 
 #if BSP_HAS_DPS368
-#include "sensor_dps368.h"
 
 typedef struct {
     lv_obj_t *bar;
     lv_obj_t *lbl_value;
     lv_obj_t *lbl_status;
-    bool      sensor_ok;
 } pressure_ctx_t;
 
 static pressure_ctx_t ctx;
@@ -31,44 +30,34 @@ static const char *pressure_status(float hpa)
 
 static void pressure_timer_cb(lv_timer_t *timer)
 {
-    pressure_ctx_t *c = (pressure_ctx_t *)lv_timer_get_user_data(timer);
-    if (!c->sensor_ok) return;
+    (void)timer;
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
 
-    float temperature, pressure;
-    if (dps368_read_both(&temperature, &pressure) == 0) {
-        lv_label_set_text_fmt(c->lbl_value, "%.2f hPa", (double)pressure);
+    if (!snap.has_dps368) return;
 
-        /* Map 950-1050 to 0-100 */
-        int32_t bar_val = (int32_t)((pressure - 950.0f));
-        lv_bar_set_value(c->bar, LV_CLAMP(0, bar_val, 100), LV_ANIM_ON);
+    /* Convert pressure_x100 to hPa */
+    float pressure = snap.dps368.pressure_x100 / 100.0f;
 
-        lv_label_set_text_fmt(c->lbl_status, "Status: %s", pressure_status(pressure));
-    }
+    lv_label_set_text_fmt(ctx.lbl_value, "%.2f hPa", (double)pressure);
+
+    /* Map 950-1050 to 0-100 */
+    int32_t bar_val = (int32_t)(pressure - 950.0f);
+    lv_bar_set_value(ctx.bar, LV_CLAMP(0, bar_val, 100), LV_ANIM_ON);
+
+    lv_label_set_text_fmt(ctx.lbl_status, "Status: %s", pressure_status(pressure));
 }
 
 void example_main(lv_obj_t *parent)
 {
-    ctx.sensor_ok = (dps368_init() == 0);
-
     /* Title */
-    lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "Barometric Pressure (DPS368)");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
+    lv_obj_t *title = example_label_create(parent,
+        "Barometric Pressure (DPS368)", &lv_font_montserrat_20, UI_COLOR_DPS368);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
 
-    if (!ctx.sensor_ok) {
-        lv_obj_t *err = lv_label_create(parent);
-        lv_label_set_text(err, "DPS368 sensor not available");
-        lv_obj_set_style_text_color(err, lv_palette_main(LV_PALETTE_RED), 0);
-        lv_obj_align(err, LV_ALIGN_CENTER, 0, 0);
-        return;
-    }
-
     /* Pressure value */
-    ctx.lbl_value = lv_label_create(parent);
-    lv_label_set_text(ctx.lbl_value, "---- hPa");
-    lv_obj_set_style_text_font(ctx.lbl_value, &lv_font_montserrat_28, 0);
-    lv_obj_set_style_text_color(ctx.lbl_value, lv_palette_main(LV_PALETTE_GREEN), 0);
+    ctx.lbl_value = example_label_create(parent, "---- hPa",
+                                          &lv_font_montserrat_28, UI_COLOR_SUCCESS);
     lv_obj_align(ctx.lbl_value, LV_ALIGN_CENTER, 0, -50);
 
     /* Pressure bar */
@@ -80,34 +69,30 @@ void example_main(lv_obj_t *parent)
     lv_obj_align(ctx.bar, LV_ALIGN_CENTER, 0, 0);
 
     /* Range labels */
-    lv_obj_t *lbl_lo = lv_label_create(parent);
-    lv_label_set_text(lbl_lo, "950");
-    lv_obj_set_style_text_font(lbl_lo, &lv_font_montserrat_14, 0);
+    lv_obj_t *lbl_lo = example_label_create(parent, "950",
+                                             &lv_font_montserrat_14, UI_COLOR_TEXT_DIM);
     lv_obj_align(lbl_lo, LV_ALIGN_CENTER, -260, 25);
 
-    lv_obj_t *lbl_hi = lv_label_create(parent);
-    lv_label_set_text(lbl_hi, "1050");
-    lv_obj_set_style_text_font(lbl_hi, &lv_font_montserrat_14, 0);
+    lv_obj_t *lbl_hi = example_label_create(parent, "1050",
+                                             &lv_font_montserrat_14, UI_COLOR_TEXT_DIM);
     lv_obj_align(lbl_hi, LV_ALIGN_CENTER, 255, 25);
 
     /* Status label */
-    ctx.lbl_status = lv_label_create(parent);
-    lv_label_set_text(ctx.lbl_status, "Status: --");
-    lv_obj_set_style_text_font(ctx.lbl_status, &lv_font_montserrat_16, 0);
+    ctx.lbl_status = example_label_create(parent, "Status: --",
+                                           &lv_font_montserrat_16, UI_COLOR_TEXT);
     lv_obj_align(ctx.lbl_status, LV_ALIGN_CENTER, 0, 60);
 
     /* Timer: 500ms */
-    lv_timer_create(pressure_timer_cb, 500, &ctx);
+    lv_timer_create(pressure_timer_cb, 500, NULL);
 }
 
 #else
 
 void example_main(lv_obj_t *parent)
 {
-    lv_obj_t *lbl = lv_label_create(parent);
-    lv_label_set_text(lbl, "DPS368 not available on this board.\nThis example requires AI Kit.");
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(lbl, lv_palette_main(LV_PALETTE_RED), 0);
+    lv_obj_t *lbl = example_label_create(parent,
+        "DPS368 not available on this board.\nThis example requires AI Kit.",
+        &lv_font_montserrat_20, UI_COLOR_ERROR);
     lv_obj_center(lbl);
 }
 

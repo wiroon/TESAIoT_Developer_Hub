@@ -1,0 +1,11 @@
+{
+  "title": "Compass Rose",
+  "description": "Graphical compass with rotating needle driven by BMM350 magnetometer heading",
+  "difficulty": "intermediate",
+  "domain": "Visualization",
+  "tags": ["bmm350", "sensor", "visualization", "canvas"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": true,
+  "sensors_used": ["BMM350"]
+}

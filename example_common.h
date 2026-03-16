@@ -48,6 +48,9 @@
 /* ── Sensor I2C Common ────────────────────────────────────────────── */
 #include "sensor_i2c.h"
 
+/* ── Sensor Hub IPC (CM55 reads sensor data via IPC from CM33) ──── */
+#include "ipc_sensorhub.h"
+
 /* ── Display Constants ────────────────────────────────────────────── */
 #define DISPLAY_WIDTH   480
 #define DISPLAY_HEIGHT  800

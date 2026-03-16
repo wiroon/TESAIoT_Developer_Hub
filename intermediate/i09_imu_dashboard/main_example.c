@@ -4,10 +4,10 @@
  *
  * Two card containers: Accelerometer (top) and Gyroscope (bottom).
  * Each card has a 3-series line chart and 3 value labels.
+ * All data via IPC sensorhub snapshot.
  */
 
 #include "example_common.h"
-#include "sensor_bmi270.h"
 
 /* ── Card dimensions ─────────────────────────────────────────────── */
 #define CARD_W      720
@@ -27,21 +27,12 @@ static const lv_palette_t s_pal[3] = {
 /* ── Helper: create a sensor card ────────────────────────────────── */
 static lv_obj_t *create_card(lv_obj_t *parent, const char *title, int y_off)
 {
-    lv_obj_t *card = lv_obj_create(parent);
-    lv_obj_set_size(card, CARD_W, CARD_H);
+    lv_obj_t *card = example_card_create(parent, CARD_W, CARD_H, UI_COLOR_CARD_BG);
     lv_obj_align(card, LV_ALIGN_TOP_MID, 0, y_off);
-    lv_obj_set_style_bg_color(card, lv_color_hex(0x142240), 0);
-    lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(card, 12, 0);
-    lv_obj_set_style_border_width(card, 1, 0);
-    lv_obj_set_style_border_color(card, lv_color_hex(0x2a4060), 0);
     lv_obj_set_style_pad_all(card, 6, 0);
-    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t *lbl = lv_label_create(card);
-    lv_label_set_text(lbl, title);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
+    lv_obj_t *lbl = example_label_create(card, title,
+        &lv_font_montserrat_14, lv_color_white());
     lv_obj_align(lbl, LV_ALIGN_TOP_LEFT, 4, 0);
 
     return card;
@@ -70,20 +61,24 @@ static lv_obj_t *create_chart(lv_obj_t *card, int32_t ymin, int32_t ymax,
     return chart;
 }
 
-/* ── Timer — 50 ms sensor read ───────────────────────────────────── */
+/* ── Timer — 50 ms IPC read ──────────────────────────────────────── */
 static void imu_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
 
-    sensor_bmi270_data_t d;
-    if (sensor_bmi270_read(&d) != 0) return;
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
+    if (!snap.has_bmi270) return;
 
-    int32_t ax = (int32_t)(d.accel_x * 1000.0f);
-    int32_t ay = (int32_t)(d.accel_y * 1000.0f);
-    int32_t az = (int32_t)(d.accel_z * 1000.0f);
-    int32_t gx = (int32_t)(d.gyro_x);
-    int32_t gy = (int32_t)(d.gyro_y);
-    int32_t gz = (int32_t)(d.gyro_z);
+    /* Accel: raw / 16384 * 1000 = milli-g */
+    int32_t ax = snap.bmi270.ax * 1000 / 16384;
+    int32_t ay = snap.bmi270.ay * 1000 / 16384;
+    int32_t az = snap.bmi270.az * 1000 / 16384;
+
+    /* Gyro: raw / 16.4 = dps (integer approx) */
+    int32_t gx = snap.bmi270.gx * 10 / 164;
+    int32_t gy = snap.bmi270.gy * 10 / 164;
+    int32_t gz = snap.bmi270.gz * 10 / 164;
 
     int32_t acc_vals[3] = { ax, ay, az };
     int32_t gyr_vals[3] = { gx, gy, gz };
@@ -104,10 +99,9 @@ static void imu_timer_cb(lv_timer_t *timer)
 void example_main(lv_obj_t *parent)
 {
     /* Title */
-    lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I09 — IMU Dashboard");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_t *title = example_label_create(parent,
+        "I09 \xe2\x80\x94 IMU Dashboard",
+        &lv_font_montserrat_20, UI_COLOR_PRIMARY);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 2);
 
     /* Accelerometer card */
@@ -115,10 +109,8 @@ void example_main(lv_obj_t *parent)
     s_chart_acc = create_chart(card_acc, -2000, 2000, s_acc);
 
     for (int i = 0; i < 3; i++) {
-        s_lbl_acc[i] = lv_label_create(card_acc);
-        lv_label_set_text(s_lbl_acc[i], "--");
-        lv_obj_set_style_text_color(s_lbl_acc[i], lv_palette_main(s_pal[i]), 0);
-        lv_obj_set_style_text_font(s_lbl_acc[i], &lv_font_montserrat_14, 0);
+        s_lbl_acc[i] = example_label_create(card_acc, "--",
+            &lv_font_montserrat_14, lv_palette_main(s_pal[i]));
         lv_obj_align(s_lbl_acc[i], LV_ALIGN_BOTTOM_LEFT, 4 + i * 230, -2);
     }
 
@@ -127,14 +119,11 @@ void example_main(lv_obj_t *parent)
     s_chart_gyr = create_chart(card_gyr, -500, 500, s_gyr);
 
     for (int i = 0; i < 3; i++) {
-        s_lbl_gyr[i] = lv_label_create(card_gyr);
-        lv_label_set_text(s_lbl_gyr[i], "--");
-        lv_obj_set_style_text_color(s_lbl_gyr[i], lv_palette_main(s_pal[i]), 0);
-        lv_obj_set_style_text_font(s_lbl_gyr[i], &lv_font_montserrat_14, 0);
+        s_lbl_gyr[i] = example_label_create(card_gyr, "--",
+            &lv_font_montserrat_14, lv_palette_main(s_pal[i]));
         lv_obj_align(s_lbl_gyr[i], LV_ALIGN_BOTTOM_LEFT, 4 + i * 230, -2);
     }
 
-    /* Init sensor + timer */
-    sensor_bmi270_init();
+    /* Start timer */
     lv_timer_create(imu_timer_cb, 50, NULL);
 }

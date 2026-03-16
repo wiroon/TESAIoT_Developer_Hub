@@ -1,33 +1,25 @@
 /**
  * @file    main_example.c
- * @brief   WiFi Connect Flow
+ * @brief   WiFi Connect — STA connection flow with wifi_manager API
  *
  * @description
- *   Full WiFi STA flow: scan -> select AP from dropdown -> password textarea
- *   with keyboard -> connect with status spinner -> show IP address.
- *   State machine: IDLE -> SCANNING -> SELECTING -> CONNECTING -> CONNECTED -> ERROR
+ *   Non-blocking WiFi STA flow: scan -> select AP from dropdown -> enter
+ *   password -> connect. Uses wifi_manager non-blocking scan/status APIs
+ *   to avoid blocking the GFX task. State machine drives UI transitions.
  *
  * @board    AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  * @author   TESAIoT
  */
 
 #include "example_common.h"
-#include "cy_wcm.h"
-#include "cy_wcm_error.h"
+#include "wifi_manager.h"
 
 /* ---------------------------------------------------------------------------
  * Constants
  * --------------------------------------------------------------------------- */
-#define MAX_SCAN_RESULTS    20
-#define SSID_MAX_LEN        33
+#define MAX_SCAN_RESULTS    WIFI_MGR_SCAN_MAX_ENTRIES
 #define PASSWORD_MAX_LEN    64
-#define CONNECT_TIMEOUT_MS  15000
-
-#define COLOR_BG            lv_color_hex(0x142240)
-#define COLOR_TEXT           lv_color_hex(0xE0E0E0)
-#define COLOR_SUCCESS       lv_color_hex(0x4CAF50)
-#define COLOR_ERROR         lv_color_hex(0xF44336)
-#define COLOR_PRIMARY       lv_color_hex(0x2196F3)
+#define POLL_INTERVAL_MS    200
 
 /* ---------------------------------------------------------------------------
  * State Machine
@@ -42,12 +34,6 @@ typedef enum {
 } connect_state_t;
 
 typedef struct {
-    char     ssid[SSID_MAX_LEN];
-    int16_t  rssi;
-    uint32_t security;
-} ap_entry_t;
-
-typedef struct {
     lv_obj_t          *parent;
     lv_obj_t          *status_label;
     lv_obj_t          *ip_label;
@@ -57,11 +43,11 @@ typedef struct {
     lv_obj_t          *keyboard;
     lv_obj_t          *btn_scan;
     lv_obj_t          *btn_connect;
-    ap_entry_t         aps[MAX_SCAN_RESULTS];
-    uint8_t            ap_count;
+    lv_obj_t          *indicator;
+    lv_timer_t        *poll_timer;
+    wifi_mgr_scan_entry_t aps[MAX_SCAN_RESULTS];
+    int                ap_count;
     connect_state_t    state;
-    SemaphoreHandle_t  scan_done;
-    TaskHandle_t       task_handle;
 } wifi_connect_ctx_t;
 
 static wifi_connect_ctx_t s_ctx;
@@ -102,133 +88,83 @@ static void set_state(wifi_connect_ctx_t *ctx, connect_state_t new_state)
 
     if (show_ip)       lv_obj_remove_flag(ctx->ip_label, LV_OBJ_FLAG_HIDDEN);
     else               lv_obj_add_flag(ctx->ip_label, LV_OBJ_FLAG_HIDDEN);
+
+    /* Update indicator color */
+    lv_color_t ind_color;
+    switch (new_state) {
+        case STATE_CONNECTED: ind_color = UI_COLOR_SUCCESS; break;
+        case STATE_ERROR:     ind_color = UI_COLOR_ERROR;   break;
+        case STATE_SCANNING:
+        case STATE_CONNECTING: ind_color = UI_COLOR_WARNING; break;
+        default:               ind_color = UI_COLOR_TEXT_DIM; break;
+    }
+    lv_obj_set_style_bg_color(ctx->indicator, ind_color, 0);
 }
 
 /* ---------------------------------------------------------------------------
- * Scan callback
+ * Security string
  * --------------------------------------------------------------------------- */
-static void scan_cb(cy_wcm_scan_result_t *result, void *arg, cy_wcm_scan_status_t status)
+static const char *security_str(uint8_t sec)
 {
-    wifi_connect_ctx_t *ctx = (wifi_connect_ctx_t *)arg;
-
-    if (status == CY_WCM_SCAN_INCOMPLETE && result != NULL) {
-        if (result->SSID[0] == '\0' || ctx->ap_count >= MAX_SCAN_RESULTS) return;
-
-        /* Skip duplicates */
-        for (uint8_t i = 0; i < ctx->ap_count; i++) {
-            if (strncmp(ctx->aps[i].ssid, (const char *)result->SSID, SSID_MAX_LEN) == 0) {
-                return;
-            }
-        }
-
-        ap_entry_t *ap = &ctx->aps[ctx->ap_count];
-        strncpy(ap->ssid, (const char *)result->SSID, SSID_MAX_LEN - 1);
-        ap->rssi     = result->signal_strength;
-        ap->security = result->security;
-        ctx->ap_count++;
-    } else if (status == CY_WCM_SCAN_COMPLETE) {
-        xSemaphoreGive(ctx->scan_done);
+    switch (sec) {
+        case 0:  return "Open";
+        case 1:  return "WEP";
+        case 2:  return "WPA";
+        case 3:  return "WPA2";
+        case 4:  return "WPA3";
+        default: return "?";
     }
 }
 
 /* ---------------------------------------------------------------------------
- * WiFi task: handles scan and connect operations
+ * Poll timer: handles scan-ready and connect-status checks
  * --------------------------------------------------------------------------- */
-static void wifi_task(void *pvParameters)
+static void poll_timer_cb(lv_timer_t *timer)
 {
-    wifi_connect_ctx_t *ctx = (wifi_connect_ctx_t *)pvParameters;
+    wifi_connect_ctx_t *ctx = (wifi_connect_ctx_t *)lv_timer_get_user_data(timer);
 
-    for (;;) {
-        uint32_t cmd = 0;
-        xTaskNotifyWait(0, UINT32_MAX, &cmd, portMAX_DELAY);
+    if (ctx->state == STATE_SCANNING) {
+        if (!wifi_manager_scan_ready()) return;
 
-        if (cmd == 1) {
-            /* --- SCAN --- */
-            ctx->ap_count = 0;
+        ctx->ap_count = wifi_manager_scan_result(ctx->aps, MAX_SCAN_RESULTS);
 
-            lv_lock();
-            set_state(ctx, STATE_SCANNING);
-            lv_label_set_text(ctx->status_label, "Scanning networks...");
-            lv_unlock();
-
-            cy_wcm_scan_filter_t filter;
-            memset(&filter, 0, sizeof(filter));
-            cy_rslt_t res = cy_wcm_start_scan(scan_cb, ctx, &filter);
-
-            if (res != CY_RSLT_SUCCESS) {
-                lv_lock();
-                lv_label_set_text(ctx->status_label, "Scan failed");
-                set_state(ctx, STATE_ERROR);
-                lv_unlock();
-                continue;
-            }
-
-            xSemaphoreTake(ctx->scan_done, pdMS_TO_TICKS(10000));
-
-            /* Populate dropdown */
-            lv_lock();
-            lv_dropdown_clear_options(ctx->dropdown);
-            for (uint8_t i = 0; i < ctx->ap_count; i++) {
-                char opt[48];
-                snprintf(opt, sizeof(opt), "%s (%d dBm)", ctx->aps[i].ssid, ctx->aps[i].rssi);
-                lv_dropdown_add_option(ctx->dropdown, opt, i);
-            }
-            if (ctx->ap_count > 0) {
-                char status_buf[32];
-                snprintf(status_buf, sizeof(status_buf), "Found %u networks", ctx->ap_count);
-                lv_label_set_text(ctx->status_label, status_buf);
-                set_state(ctx, STATE_SELECTING);
-            } else {
-                lv_label_set_text(ctx->status_label, "No networks found");
-                set_state(ctx, STATE_ERROR);
-            }
-            lv_unlock();
-
-        } else if (cmd == 2) {
-            /* --- CONNECT --- */
-            lv_lock();
-            set_state(ctx, STATE_CONNECTING);
-            lv_label_set_text(ctx->status_label, "Connecting...");
-
-            uint32_t sel = lv_dropdown_get_selected(ctx->dropdown);
-            const char *password = lv_textarea_get_text(ctx->textarea);
-            lv_unlock();
-
-            if (sel >= ctx->ap_count) continue;
-
-            cy_wcm_connect_params_t params;
-            memset(&params, 0, sizeof(params));
-            memcpy(params.ap_credentials.SSID, ctx->aps[sel].ssid,
-                   strlen(ctx->aps[sel].ssid));
-            memcpy(params.ap_credentials.password, password,
-                   strlen(password));
-            params.ap_credentials.security = ctx->aps[sel].security;
-
-            cy_wcm_ip_address_t ip;
-            cy_rslt_t res = cy_wcm_connect_ap(&params, &ip);
-
-            lv_lock();
-            if (res == CY_RSLT_SUCCESS) {
-                char ip_str[48];
-                snprintf(ip_str, sizeof(ip_str), "IP: %u.%u.%u.%u",
-                         (uint8_t)(ip.ip.v4),
-                         (uint8_t)(ip.ip.v4 >> 8),
-                         (uint8_t)(ip.ip.v4 >> 16),
-                         (uint8_t)(ip.ip.v4 >> 24));
-                lv_label_set_text(ctx->ip_label, ip_str);
-                lv_obj_set_style_text_color(ctx->ip_label, COLOR_SUCCESS, 0);
-                lv_label_set_text(ctx->status_label, "Connected!");
-                lv_obj_set_style_text_color(ctx->status_label, COLOR_SUCCESS, 0);
-                set_state(ctx, STATE_CONNECTED);
-            } else {
-                char err[48];
-                snprintf(err, sizeof(err), "Connect failed: 0x%08lX", (unsigned long)res);
-                lv_label_set_text(ctx->status_label, err);
-                lv_obj_set_style_text_color(ctx->status_label, COLOR_ERROR, 0);
-                set_state(ctx, STATE_ERROR);
-            }
-            lv_unlock();
+        if (ctx->ap_count <= 0) {
+            lv_label_set_text(ctx->status_label, "No networks found");
+            lv_obj_set_style_text_color(ctx->status_label, UI_COLOR_WARNING, 0);
+            set_state(ctx, STATE_ERROR);
+            return;
         }
+
+        /* Populate dropdown */
+        lv_dropdown_clear_options(ctx->dropdown);
+        for (int i = 0; i < ctx->ap_count; i++) {
+            char opt[64];
+            snprintf(opt, sizeof(opt), "%s (%d dBm, %s)",
+                     ctx->aps[i].ssid, ctx->aps[i].rssi,
+                     security_str(ctx->aps[i].security));
+            lv_dropdown_add_option(ctx->dropdown, opt, (uint32_t)i);
+        }
+
+        char buf[32];
+        snprintf(buf, sizeof(buf), "Found %d networks", ctx->ap_count);
+        lv_label_set_text(ctx->status_label, buf);
+        lv_obj_set_style_text_color(ctx->status_label, UI_COLOR_SUCCESS, 0);
+        set_state(ctx, STATE_SELECTING);
+
+    } else if (ctx->state == STATE_CONNECTING) {
+        /* Check if connected */
+        if (wifi_manager_is_connected()) {
+            const char *ip = wifi_manager_get_ip();
+            char ip_buf[48];
+            snprintf(ip_buf, sizeof(ip_buf), "IP: %s", ip ? ip : "unknown");
+            lv_label_set_text(ctx->ip_label, ip_buf);
+            lv_obj_set_style_text_color(ctx->ip_label, UI_COLOR_SUCCESS, 0);
+
+            lv_label_set_text(ctx->status_label, "Connected!");
+            lv_obj_set_style_text_color(ctx->status_label, UI_COLOR_SUCCESS, 0);
+            set_state(ctx, STATE_CONNECTED);
+        }
+        /* Note: timeout handled by wifi_manager internally */
     }
 }
 
@@ -237,12 +173,41 @@ static void wifi_task(void *pvParameters)
  * --------------------------------------------------------------------------- */
 static void btn_scan_clicked(lv_event_t *e)
 {
-    xTaskNotify(s_ctx.task_handle, 1, eSetValueWithOverwrite);
+    wifi_connect_ctx_t *ctx = (wifi_connect_ctx_t *)lv_event_get_user_data(e);
+
+    if (!wifi_manager_scan_start()) {
+        lv_label_set_text(ctx->status_label, "Scan start failed");
+        lv_obj_set_style_text_color(ctx->status_label, UI_COLOR_ERROR, 0);
+        return;
+    }
+
+    lv_label_set_text(ctx->status_label, "Scanning...");
+    lv_obj_set_style_text_color(ctx->status_label, UI_COLOR_TEXT, 0);
+    set_state(ctx, STATE_SCANNING);
 }
 
 static void btn_connect_clicked(lv_event_t *e)
 {
-    xTaskNotify(s_ctx.task_handle, 2, eSetValueWithOverwrite);
+    wifi_connect_ctx_t *ctx = (wifi_connect_ctx_t *)lv_event_get_user_data(e);
+
+    uint32_t sel = lv_dropdown_get_selected(ctx->dropdown);
+    if ((int)sel >= ctx->ap_count) return;
+
+    const char *password = lv_textarea_get_text(ctx->textarea);
+    const char *ssid = ctx->aps[sel].ssid;
+
+    lv_label_set_text(ctx->status_label, "Connecting...");
+    lv_obj_set_style_text_color(ctx->status_label, UI_COLOR_TEXT, 0);
+    set_state(ctx, STATE_CONNECTING);
+
+    /* wifi_manager_connect is blocking on CM33; on CM55 it sends IPC */
+    bool ok = wifi_manager_connect(ssid, password);
+    if (!ok) {
+        lv_label_set_text(ctx->status_label, "Connect failed");
+        lv_obj_set_style_text_color(ctx->status_label, UI_COLOR_ERROR, 0);
+        set_state(ctx, STATE_ERROR);
+    }
+    /* If ok, poll_timer_cb will detect connection via wifi_manager_is_connected() */
 }
 
 /* ---------------------------------------------------------------------------
@@ -252,7 +217,6 @@ void example_main(lv_obj_t *parent)
 {
     memset(&s_ctx, 0, sizeof(s_ctx));
     s_ctx.parent = parent;
-    s_ctx.scan_done = xSemaphoreCreateBinary();
 
     /* --- Title --- */
     lv_obj_t *title = lv_label_create(parent);
@@ -261,11 +225,21 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
 
+    /* --- Connection indicator (circle) --- */
+    s_ctx.indicator = lv_obj_create(parent);
+    lv_obj_set_size(s_ctx.indicator, 14, 14);
+    lv_obj_set_style_radius(s_ctx.indicator, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(s_ctx.indicator, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_style_bg_opa(s_ctx.indicator, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(s_ctx.indicator, 0, 0);
+    lv_obj_align(s_ctx.indicator, LV_ALIGN_TOP_LEFT, 16, 42);
+    lv_obj_clear_flag(s_ctx.indicator, LV_OBJ_FLAG_SCROLLABLE);
+
     /* --- Status label --- */
     s_ctx.status_label = lv_label_create(parent);
     lv_label_set_text(s_ctx.status_label, "Press Scan to find networks");
-    lv_obj_set_style_text_color(s_ctx.status_label, COLOR_TEXT, 0);
-    lv_obj_align(s_ctx.status_label, LV_ALIGN_TOP_LEFT, 16, 38);
+    lv_obj_set_style_text_color(s_ctx.status_label, UI_COLOR_TEXT, 0);
+    lv_obj_align(s_ctx.status_label, LV_ALIGN_TOP_LEFT, 38, 38);
 
     /* --- Spinner --- */
     s_ctx.spinner = lv_spinner_create(parent);
@@ -302,7 +276,7 @@ void example_main(lv_obj_t *parent)
     s_ctx.ip_label = lv_label_create(parent);
     lv_label_set_text(s_ctx.ip_label, "");
     lv_obj_set_style_text_font(s_ctx.ip_label, &lv_font_montserrat_28, 0);
-    lv_obj_set_style_text_color(s_ctx.ip_label, COLOR_SUCCESS, 0);
+    lv_obj_set_style_text_color(s_ctx.ip_label, UI_COLOR_SUCCESS, 0);
     lv_obj_align(s_ctx.ip_label, LV_ALIGN_CENTER, 0, 20);
     lv_obj_add_flag(s_ctx.ip_label, LV_OBJ_FLAG_HIDDEN);
 
@@ -310,8 +284,9 @@ void example_main(lv_obj_t *parent)
     s_ctx.btn_scan = lv_btn_create(parent);
     lv_obj_set_size(s_ctx.btn_scan, 140, 44);
     lv_obj_align(s_ctx.btn_scan, LV_ALIGN_BOTTOM_MID, -80, -8);
-    lv_obj_set_style_bg_color(s_ctx.btn_scan, COLOR_PRIMARY, 0);
-    lv_obj_add_event_cb(s_ctx.btn_scan, btn_scan_clicked, LV_EVENT_CLICKED, NULL);
+    lv_obj_set_style_bg_color(s_ctx.btn_scan, UI_COLOR_INFO, 0);
+    lv_obj_set_style_radius(s_ctx.btn_scan, 8, 0);
+    lv_obj_add_event_cb(s_ctx.btn_scan, btn_scan_clicked, LV_EVENT_CLICKED, &s_ctx);
     lv_obj_t *lbl1 = lv_label_create(s_ctx.btn_scan);
     lv_label_set_text(lbl1, LV_SYMBOL_REFRESH " Scan");
     lv_obj_center(lbl1);
@@ -320,21 +295,14 @@ void example_main(lv_obj_t *parent)
     s_ctx.btn_connect = lv_btn_create(parent);
     lv_obj_set_size(s_ctx.btn_connect, 140, 44);
     lv_obj_align(s_ctx.btn_connect, LV_ALIGN_BOTTOM_MID, 80, -8);
-    lv_obj_set_style_bg_color(s_ctx.btn_connect, COLOR_SUCCESS, 0);
-    lv_obj_add_event_cb(s_ctx.btn_connect, btn_connect_clicked, LV_EVENT_CLICKED, NULL);
+    lv_obj_set_style_bg_color(s_ctx.btn_connect, UI_COLOR_SUCCESS, 0);
+    lv_obj_set_style_radius(s_ctx.btn_connect, 8, 0);
+    lv_obj_add_event_cb(s_ctx.btn_connect, btn_connect_clicked, LV_EVENT_CLICKED, &s_ctx);
     lv_obj_t *lbl2 = lv_label_create(s_ctx.btn_connect);
     lv_label_set_text(lbl2, LV_SYMBOL_OK " Connect");
     lv_obj_center(lbl2);
     lv_obj_add_flag(s_ctx.btn_connect, LV_OBJ_FLAG_HIDDEN);
 
-    /* --- Initialize WCM --- */
-    cy_wcm_config_t wcm_cfg = { .interface = CY_WCM_INTERFACE_TYPE_STA };
-    cy_rslt_t res = cy_wcm_init(&wcm_cfg);
-    if (res != CY_RSLT_SUCCESS) {
-        lv_label_set_text(s_ctx.status_label, "WCM init failed!");
-        return;
-    }
-
-    /* --- Create WiFi task --- */
-    xTaskCreate(wifi_task, "wifi_connect", 4096, &s_ctx, 3, &s_ctx.task_handle);
+    /* --- Poll timer for non-blocking operations --- */
+    s_ctx.poll_timer = lv_timer_create(poll_timer_cb, POLL_INTERVAL_MS, &s_ctx);
 }

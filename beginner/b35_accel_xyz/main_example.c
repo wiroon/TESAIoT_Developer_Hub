@@ -1,13 +1,12 @@
 /**
  * @file    main_example.c
- * @brief   Accelerometer XYZ — BMI270 live accel display
+ * @brief   Accelerometer XYZ — BMI270 live accel via IPC sensorhub
  *
- * Reads BMI270 accelerometer at 100ms intervals and displays
- * X, Y, Z values with color-coded labels and bar indicators.
+ * Reads BMI270 accelerometer data at 100ms intervals using
+ * ipc_sensorhub_snapshot() and displays X, Y, Z with bar indicators.
  */
 
 #include "example_common.h"
-#include "sensor_bmi270.h"
 
 typedef struct {
     lv_obj_t *lbl_x;
@@ -16,30 +15,34 @@ typedef struct {
     lv_obj_t *bar_x;
     lv_obj_t *bar_y;
     lv_obj_t *bar_z;
-    bool      sensor_ok;
 } accel_ctx_t;
 
 static accel_ctx_t ctx;
 
 static void accel_timer_cb(lv_timer_t *timer)
 {
-    accel_ctx_t *c = (accel_ctx_t *)lv_timer_get_user_data(timer);
-    if (!c->sensor_ok) return;
+    (void)timer;
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
 
-    float ax, ay, az;
-    if (bmi270_read_accel(&ax, &ay, &az) == 0) {
-        lv_label_set_text_fmt(c->lbl_x, "X: %+.2f g", (double)ax);
-        lv_label_set_text_fmt(c->lbl_y, "Y: %+.2f g", (double)ay);
-        lv_label_set_text_fmt(c->lbl_z, "Z: %+.2f g", (double)az);
+    if (!snap.has_bmi270) return;
 
-        /* Map [-2, +2]g to [0, 100] for bars */
-        int32_t bx = (int32_t)((ax + 2.0f) * 25.0f);
-        int32_t by = (int32_t)((ay + 2.0f) * 25.0f);
-        int32_t bz = (int32_t)((az + 2.0f) * 25.0f);
-        lv_bar_set_value(c->bar_x, LV_CLAMP(0, bx, 100), LV_ANIM_ON);
-        lv_bar_set_value(c->bar_y, LV_CLAMP(0, by, 100), LV_ANIM_ON);
-        lv_bar_set_value(c->bar_z, LV_CLAMP(0, bz, 100), LV_ANIM_ON);
-    }
+    /* Convert raw int16 to g (divide by 16384) */
+    float ax = snap.bmi270.ax / 16384.0f;
+    float ay = snap.bmi270.ay / 16384.0f;
+    float az = snap.bmi270.az / 16384.0f;
+
+    lv_label_set_text_fmt(ctx.lbl_x, "X: %+.2f g", (double)ax);
+    lv_label_set_text_fmt(ctx.lbl_y, "Y: %+.2f g", (double)ay);
+    lv_label_set_text_fmt(ctx.lbl_z, "Z: %+.2f g", (double)az);
+
+    /* Map [-2, +2]g to [0, 100] for bars */
+    int32_t bx = (int32_t)((ax + 2.0f) * 25.0f);
+    int32_t by = (int32_t)((ay + 2.0f) * 25.0f);
+    int32_t bz = (int32_t)((az + 2.0f) * 25.0f);
+    lv_bar_set_value(ctx.bar_x, LV_CLAMP(0, bx, 100), LV_ANIM_ON);
+    lv_bar_set_value(ctx.bar_y, LV_CLAMP(0, by, 100), LV_ANIM_ON);
+    lv_bar_set_value(ctx.bar_z, LV_CLAMP(0, bz, 100), LV_ANIM_ON);
 }
 
 static void create_axis_row(lv_obj_t *parent, const char *name, lv_palette_t color,
@@ -61,28 +64,17 @@ static void create_axis_row(lv_obj_t *parent, const char *name, lv_palette_t col
 
 void example_main(lv_obj_t *parent)
 {
-    /* Initialize sensor */
-    ctx.sensor_ok = (bmi270_init() == 0);
-
     /* Title */
-    lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, LV_SYMBOL_REFRESH " Accelerometer (BMI270)");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
+    lv_obj_t *title = example_label_create(parent,
+        LV_SYMBOL_REFRESH " Accelerometer (BMI270)",
+        &lv_font_montserrat_20, UI_COLOR_BMI270);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
 
-    if (!ctx.sensor_ok) {
-        lv_obj_t *err = lv_label_create(parent);
-        lv_label_set_text(err, "Sensor init failed!");
-        lv_obj_set_style_text_color(err, lv_palette_main(LV_PALETTE_RED), 0);
-        lv_obj_align(err, LV_ALIGN_CENTER, 0, 0);
-        return;
-    }
-
     /* Axis rows */
-    create_axis_row(parent, "X", LV_PALETTE_RED,    &ctx.lbl_x, &ctx.bar_x, -40);
-    create_axis_row(parent, "Y", LV_PALETTE_GREEN,  &ctx.lbl_y, &ctx.bar_y,  10);
-    create_axis_row(parent, "Z", LV_PALETTE_BLUE,   &ctx.lbl_z, &ctx.bar_z,  60);
+    create_axis_row(parent, "X", LV_PALETTE_RED,   &ctx.lbl_x, &ctx.bar_x, -40);
+    create_axis_row(parent, "Y", LV_PALETTE_GREEN, &ctx.lbl_y, &ctx.bar_y,  10);
+    create_axis_row(parent, "Z", LV_PALETTE_BLUE,  &ctx.lbl_z, &ctx.bar_z,  60);
 
     /* Timer: 100ms */
-    lv_timer_create(accel_timer_cb, 100, &ctx);
+    lv_timer_create(accel_timer_cb, 100, NULL);
 }

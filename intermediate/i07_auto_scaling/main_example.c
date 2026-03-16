@@ -7,7 +7,6 @@
  */
 
 #include "example_common.h"
-#include "sensor_bmi270.h"
 
 #define POINT_CNT   80
 #define MARGIN_PCT  10    /* % above/below data extremes */
@@ -48,10 +47,12 @@ static void timer_cb(lv_timer_t *timer)
 {
     (void)timer;
 
-    sensor_bmi270_data_t d;
-    if (sensor_bmi270_read(&d) != 0) return;
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
+    if (!snap.has_bmi270) return;
 
-    int32_t val = (int32_t)(d.accel_x * 1000.0f);
+    /* raw / 16384 * 1000 = milli-g */
+    int32_t val = snap.bmi270.ax * 1000 / 16384;
     lv_chart_set_next_value(s_chart, s_series, val);
     s_sample_count++;
 
@@ -63,17 +64,14 @@ static void timer_cb(lv_timer_t *timer)
 void example_main(lv_obj_t *parent)
 {
     /* Title */
-    lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I07 — Auto-Scaling Chart");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_t *title = example_label_create(parent,
+        "I07 \xe2\x80\x94 Auto-Scaling Chart",
+        &lv_font_montserrat_20, UI_COLOR_PRIMARY);
     lv_obj_align(title, LV_ALIGN_TOP_LEFT, 16, 6);
 
     /* Range label */
-    s_lbl_range = lv_label_create(parent);
-    lv_label_set_text(s_lbl_range, "Range: [--]");
-    lv_obj_set_style_text_font(s_lbl_range, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(s_lbl_range, lv_palette_main(LV_PALETTE_GREY), 0);
+    s_lbl_range = example_label_create(parent, "Range: [--]",
+        &lv_font_montserrat_14, UI_COLOR_TEXT_DIM);
     lv_obj_align(s_lbl_range, LV_ALIGN_TOP_RIGHT, -16, 10);
 
     /* Chart */
@@ -85,7 +83,7 @@ void example_main(lv_obj_t *parent)
     lv_chart_set_range(s_chart, LV_CHART_AXIS_PRIMARY_Y, -1000, 1000);
     lv_chart_set_div_line_count(s_chart, 5, 8);
     lv_obj_set_style_line_width(s_chart, 0, LV_PART_ITEMS);
-    lv_obj_set_style_bg_color(s_chart, lv_color_hex(0x142240), 0);
+    lv_obj_set_style_bg_color(s_chart, UI_COLOR_CARD_BG, 0);
     lv_obj_set_style_bg_opa(s_chart, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(s_chart, 8, 0);
     lv_obj_set_style_border_width(s_chart, 1, 0);
@@ -95,14 +93,11 @@ void example_main(lv_obj_t *parent)
                                    LV_CHART_AXIS_PRIMARY_Y);
 
     /* Value label */
-    s_lbl_value = lv_label_create(parent);
-    lv_label_set_text(s_lbl_value, "X: -- mg");
-    lv_obj_set_style_text_font(s_lbl_value, &lv_font_montserrat_16, 0);
-    lv_obj_set_style_text_color(s_lbl_value, lv_palette_main(LV_PALETTE_AMBER), 0);
+    s_lbl_value = example_label_create(parent, "X: -- mg",
+        &lv_font_montserrat_16, lv_palette_main(LV_PALETTE_AMBER));
     lv_obj_align(s_lbl_value, LV_ALIGN_BOTTOM_MID, 0, -10);
 
     /* Init */
     s_sample_count = 0;
-    sensor_bmi270_init();
     lv_timer_create(timer_cb, 50, NULL);
 }

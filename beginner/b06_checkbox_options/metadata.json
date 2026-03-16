@@ -1,0 +1,10 @@
+{
+  "title": "Checkbox Options",
+  "description": "Three checkboxes with a dynamic status label showing selections",
+  "difficulty": "beginner",
+  "domain": "UI Widgets",
+  "tags": ["lvgl", "checkbox", "event"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": false
+}

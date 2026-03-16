@@ -1,0 +1,10 @@
+{
+  "title": "Slider Brightness",
+  "description": "A slider that changes the background brightness in real time",
+  "difficulty": "beginner",
+  "domain": "UI Widgets",
+  "tags": ["lvgl", "slider", "event"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": false
+}

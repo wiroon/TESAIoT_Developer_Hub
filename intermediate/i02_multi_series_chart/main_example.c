@@ -2,11 +2,10 @@
  * @file    main_example.c
  * @brief   Multi-Series Chart — 3 color-coded series for BMI270 accel X/Y/Z
  *
- * Red = X, Green = Y, Blue = Z.  Timer reads sensor at 50 ms intervals.
+ * Red = X, Green = Y, Blue = Z.  Timer reads IPC snapshot at 50 ms intervals.
  */
 
 #include "example_common.h"
-#include "sensor_bmi270.h"
 
 /* ── Static handles ──────────────────────────────────────────────── */
 static lv_obj_t            *s_chart;
@@ -17,20 +16,19 @@ static lv_obj_t            *s_lbl_x;
 static lv_obj_t            *s_lbl_y;
 static lv_obj_t            *s_lbl_z;
 
-/* ── Timer callback — read BMI270 accel, push to chart ───────────── */
+/* ── Timer callback — read BMI270 accel via IPC, push to chart ──── */
 static void timer_cb(lv_timer_t *timer)
 {
     (void)timer;
 
-    sensor_bmi270_data_t data;
-    if (sensor_bmi270_read(&data) != 0) {
-        return;   /* sensor read failed — skip this tick */
-    }
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
+    if (!snap.has_bmi270) return;
 
-    /* Accelerometer values in milli-g */
-    int32_t ax = (int32_t)(data.accel_x * 1000.0f);
-    int32_t ay = (int32_t)(data.accel_y * 1000.0f);
-    int32_t az = (int32_t)(data.accel_z * 1000.0f);
+    /* Convert raw int16 to milli-g: raw / 16384.0 * 1000 */
+    int32_t ax = (int32_t)(snap.bmi270.ax * 1000 / 16384);
+    int32_t ay = (int32_t)(snap.bmi270.ay * 1000 / 16384);
+    int32_t az = (int32_t)(snap.bmi270.az * 1000 / 16384);
 
     lv_chart_set_next_value(s_chart, s_ser_x, ax);
     lv_chart_set_next_value(s_chart, s_ser_y, ay);
@@ -45,10 +43,9 @@ static void timer_cb(lv_timer_t *timer)
 void example_main(lv_obj_t *parent)
 {
     /* Title */
-    lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I02 — Multi-Series Accel Chart");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_t *title = example_label_create(parent,
+        "I02 \xe2\x80\x94 Multi-Series Accel Chart",
+        &lv_font_montserrat_20, UI_COLOR_PRIMARY);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);
 
     /* Chart */
@@ -60,7 +57,7 @@ void example_main(lv_obj_t *parent)
     lv_chart_set_range(s_chart, LV_CHART_AXIS_PRIMARY_Y, -2000, 2000);
     lv_chart_set_div_line_count(s_chart, 5, 8);
     lv_obj_set_style_line_width(s_chart, 0, LV_PART_ITEMS);
-    lv_obj_set_style_bg_color(s_chart, lv_color_hex(0x142240), 0);
+    lv_obj_set_style_bg_color(s_chart, UI_COLOR_CARD_BG, 0);
     lv_obj_set_style_bg_opa(s_chart, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(s_chart, 8, 0);
     lv_obj_set_style_border_width(s_chart, 1, 0);
@@ -71,25 +68,18 @@ void example_main(lv_obj_t *parent)
     s_ser_z = lv_chart_add_series(s_chart, lv_palette_main(LV_PALETTE_BLUE),  LV_CHART_AXIS_PRIMARY_Y);
 
     /* Value labels row */
-    s_lbl_x = lv_label_create(parent);
-    lv_label_set_text(s_lbl_x, "X: -- mg");
-    lv_obj_set_style_text_color(s_lbl_x, lv_palette_main(LV_PALETTE_RED), 0);
-    lv_obj_set_style_text_font(s_lbl_x, &lv_font_montserrat_16, 0);
+    s_lbl_x = example_label_create(parent, "X: -- mg",
+        &lv_font_montserrat_16, lv_palette_main(LV_PALETTE_RED));
     lv_obj_align(s_lbl_x, LV_ALIGN_BOTTOM_LEFT, 60, -12);
 
-    s_lbl_y = lv_label_create(parent);
-    lv_label_set_text(s_lbl_y, "Y: -- mg");
-    lv_obj_set_style_text_color(s_lbl_y, lv_palette_main(LV_PALETTE_GREEN), 0);
-    lv_obj_set_style_text_font(s_lbl_y, &lv_font_montserrat_16, 0);
+    s_lbl_y = example_label_create(parent, "Y: -- mg",
+        &lv_font_montserrat_16, lv_palette_main(LV_PALETTE_GREEN));
     lv_obj_align(s_lbl_y, LV_ALIGN_BOTTOM_MID, 0, -12);
 
-    s_lbl_z = lv_label_create(parent);
-    lv_label_set_text(s_lbl_z, "Z: -- mg");
-    lv_obj_set_style_text_color(s_lbl_z, lv_palette_main(LV_PALETTE_BLUE), 0);
-    lv_obj_set_style_text_font(s_lbl_z, &lv_font_montserrat_16, 0);
+    s_lbl_z = example_label_create(parent, "Z: -- mg",
+        &lv_font_montserrat_16, lv_palette_main(LV_PALETTE_BLUE));
     lv_obj_align(s_lbl_z, LV_ALIGN_BOTTOM_RIGHT, -60, -12);
 
-    /* Sensor init + timer */
-    sensor_bmi270_init();
+    /* Start timer */
     lv_timer_create(timer_cb, 50, NULL);
 }

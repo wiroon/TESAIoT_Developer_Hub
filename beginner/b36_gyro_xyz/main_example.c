@@ -2,12 +2,12 @@
  * @file    main_example.c
  * @brief   Gyroscope XYZ — BMI270 gyro with arc gauge visualization
  *
- * Reads BMI270 gyroscope at 100ms intervals. Displays angular velocity
- * (degrees/sec) for X, Y, Z with arc gauges.
+ * Reads BMI270 gyroscope data at 100ms intervals using
+ * ipc_sensorhub_snapshot(). Displays angular velocity (dps)
+ * for X, Y, Z with arc gauges.
  */
 
 #include "example_common.h"
-#include "sensor_bmi270.h"
 
 typedef struct {
     lv_obj_t *lbl_x;
@@ -16,30 +16,34 @@ typedef struct {
     lv_obj_t *arc_x;
     lv_obj_t *arc_y;
     lv_obj_t *arc_z;
-    bool      sensor_ok;
 } gyro_ctx_t;
 
 static gyro_ctx_t ctx;
 
 static void gyro_timer_cb(lv_timer_t *timer)
 {
-    gyro_ctx_t *c = (gyro_ctx_t *)lv_timer_get_user_data(timer);
-    if (!c->sensor_ok) return;
+    (void)timer;
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
 
-    float gx, gy, gz;
-    if (bmi270_read_gyro(&gx, &gy, &gz) == 0) {
-        lv_label_set_text_fmt(c->lbl_x, "X\n%+.1f", (double)gx);
-        lv_label_set_text_fmt(c->lbl_y, "Y\n%+.1f", (double)gy);
-        lv_label_set_text_fmt(c->lbl_z, "Z\n%+.1f", (double)gz);
+    if (!snap.has_bmi270) return;
 
-        /* Map [-250, +250] dps to [0, 100] for arcs */
-        int32_t ax = (int32_t)((gx + 250.0f) * 0.2f);
-        int32_t ay = (int32_t)((gy + 250.0f) * 0.2f);
-        int32_t az = (int32_t)((gz + 250.0f) * 0.2f);
-        lv_arc_set_value(c->arc_x, LV_CLAMP(0, ax, 100));
-        lv_arc_set_value(c->arc_y, LV_CLAMP(0, ay, 100));
-        lv_arc_set_value(c->arc_z, LV_CLAMP(0, az, 100));
-    }
+    /* Convert raw int16 to degrees/sec (divide by 16.4) */
+    float gx = snap.bmi270.gx / 16.4f;
+    float gy = snap.bmi270.gy / 16.4f;
+    float gz = snap.bmi270.gz / 16.4f;
+
+    lv_label_set_text_fmt(ctx.lbl_x, "X\n%+.1f", (double)gx);
+    lv_label_set_text_fmt(ctx.lbl_y, "Y\n%+.1f", (double)gy);
+    lv_label_set_text_fmt(ctx.lbl_z, "Z\n%+.1f", (double)gz);
+
+    /* Map [-250, +250] dps to [0, 100] for arcs */
+    int32_t ax = (int32_t)((gx + 250.0f) * 0.2f);
+    int32_t ay = (int32_t)((gy + 250.0f) * 0.2f);
+    int32_t az = (int32_t)((gz + 250.0f) * 0.2f);
+    lv_arc_set_value(ctx.arc_x, LV_CLAMP(0, ax, 100));
+    lv_arc_set_value(ctx.arc_y, LV_CLAMP(0, ay, 100));
+    lv_arc_set_value(ctx.arc_z, LV_CLAMP(0, az, 100));
 }
 
 static void create_gyro_gauge(lv_obj_t *parent, const char *axis, lv_palette_t color,
@@ -66,21 +70,10 @@ static void create_gyro_gauge(lv_obj_t *parent, const char *axis, lv_palette_t c
 
 void example_main(lv_obj_t *parent)
 {
-    ctx.sensor_ok = (bmi270_init() == 0);
-
     /* Title */
-    lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "Gyroscope (BMI270) — \xC2\xB0/s");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
+    lv_obj_t *title = example_label_create(parent,
+        "Gyroscope (BMI270)", &lv_font_montserrat_20, UI_COLOR_BMI270);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
-
-    if (!ctx.sensor_ok) {
-        lv_obj_t *err = lv_label_create(parent);
-        lv_label_set_text(err, "BMI270 init failed!");
-        lv_obj_set_style_text_color(err, lv_palette_main(LV_PALETTE_RED), 0);
-        lv_obj_align(err, LV_ALIGN_CENTER, 0, 0);
-        return;
-    }
 
     /* Three arc gauges side by side */
     create_gyro_gauge(parent, "X", LV_PALETTE_RED,   &ctx.arc_x, &ctx.lbl_x, -220);
@@ -88,11 +81,11 @@ void example_main(lv_obj_t *parent)
     create_gyro_gauge(parent, "Z", LV_PALETTE_BLUE,  &ctx.arc_z, &ctx.lbl_z,  220);
 
     /* Unit label */
-    lv_obj_t *unit = lv_label_create(parent);
-    lv_label_set_text(unit, "Unit: degrees/second | Range: \xC2\xB1""250 \xC2\xB0/s");
-    lv_obj_set_style_text_font(unit, &lv_font_montserrat_14, 0);
+    lv_obj_t *unit = example_label_create(parent,
+        "Unit: degrees/second | Range: +/-250 dps",
+        &lv_font_montserrat_14, UI_COLOR_TEXT_DIM);
     lv_obj_align(unit, LV_ALIGN_BOTTOM_MID, 0, -10);
 
     /* Timer: 100ms */
-    lv_timer_create(gyro_timer_cb, 100, &ctx);
+    lv_timer_create(gyro_timer_cb, 100, NULL);
 }

@@ -1,0 +1,10 @@
+{
+  "title": "Flappy Bird",
+  "description": "Tilt-controlled Flappy Bird game using BMI270 accelerometer with scrolling pipes, score tracking, and collision detection",
+  "difficulty": "advanced",
+  "domain": "Game",
+  "tags": ["game", "bmi270", "sensor", "event"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": true
+}

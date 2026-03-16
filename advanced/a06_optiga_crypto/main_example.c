@@ -1,248 +1,164 @@
 /**
  * @file    main_example.c
- * @brief   OPTIGA Crypto Demo — SHA256 + ECDSA Sign + Verify
+ * @brief   Crypto Algorithm Visualization
  *
  * @description
- *   1) User enters text 2) SHA256 hash (show hex) 3) Sign with OPTIGA key
- *   4) Verify signature. Key slot 0xE0F1 (NOT 0xE0F0 which is blocked).
- *   Uses touch pause/resume IPC for I2C bus sharing.
+ *   Educational display of cryptographic concepts: ECC, SHA-256, AES, RNG.
+ *   Animated progress bars simulate processing steps. Uses lv_timer_create()
+ *   for animation — no OPTIGA or IPC calls needed.
  *
  * @board    AI Kit (KIT_PSE84_AI), Eva Kit (KIT_PSE84_EVAL_EPC2)
  * @author   TESAIoT
  */
 
 #include "example_common.h"
-#include "tesaiot_optiga_trust_m.h"
-#include "ipc_communication.h"
 
 /* ---------------------------------------------------------------------------
- * Constants
+ * Colors
  * --------------------------------------------------------------------------- */
-#define OPTIGA_KEY_SLOT         0xE0F1  /* NOT 0xE0F0 — blocked */
-#define SHA256_DIGEST_LEN       32
-#define MAX_SIGNATURE_LEN       72      /* DER-encoded ECDSA P-256 */
-#define MAX_PUBKEY_LEN          68      /* Uncompressed P-256 public key */
-#define IPC_CMD_TOUCH_PAUSE     0xD6
-#define IPC_CMD_TOUCH_RESUME    0xD7
-
 #define COLOR_BG                lv_color_hex(0x142240)
-#define COLOR_TEXT               lv_color_hex(0xE0E0E0)
-#define COLOR_SUCCESS            lv_color_hex(0x4CAF50)
-#define COLOR_ERROR              lv_color_hex(0xF44336)
-#define COLOR_PENDING            lv_color_hex(0x616161)
-#define COLOR_ACTIVE             lv_color_hex(0xFF9800)
-#define COLOR_ACCENT             lv_color_hex(0x7C4DFF)
+#define COLOR_CARD              lv_color_hex(0x0D1B2A)
+#define COLOR_TEXT              lv_color_hex(0xE0E0E0)
+#define COLOR_SUCCESS           lv_color_hex(0x4CAF50)
+#define COLOR_ERROR             lv_color_hex(0xF44336)
+#define COLOR_PENDING           lv_color_hex(0x616161)
+#define COLOR_ACTIVE            lv_color_hex(0xFF9800)
+#define COLOR_ACCENT            lv_color_hex(0x7C4DFF)
+#define COLOR_BAR_BG            lv_color_hex(0x1A3050)
+
+/* ---------------------------------------------------------------------------
+ * Algorithm step definitions
+ * --------------------------------------------------------------------------- */
+#define NUM_ALGOS   4
+#define ANIM_STEP   5       /* bar increment per timer tick */
+#define ANIM_MS     60      /* timer period in ms */
+
+typedef struct {
+    const char *name;
+    const char *icon;
+    const char *description;
+    const char *result_text;
+    lv_color_t  color;
+} algo_def_t;
+
+static const algo_def_t ALGOS[NUM_ALGOS] = {
+    {
+        "SHA-256 Hash",
+        LV_SYMBOL_REFRESH,
+        "256-bit digest\nOne-way function",
+        "E3B0C44298FC1C14...",
+        {.blue = 0x50, .green = 0xAF, .red = 0x4C}  /* green */
+    },
+    {
+        "ECC P-256 Sign",
+        LV_SYMBOL_EDIT,
+        "ECDSA signature\nKey slot 0xE0F1",
+        "3045022100A1B2C3...",
+        {.blue = 0xFF, .green = 0x4D, .red = 0x7C}  /* purple */
+    },
+    {
+        "AES-128 CCM",
+        LV_SYMBOL_EYE_OPEN,
+        "Authenticated enc\n12-byte nonce",
+        "Ciphertext + 8B tag",
+        {.blue = 0xF3, .green = 0x96, .red = 0x21}  /* blue */
+    },
+    {
+        "TRNG (256-bit)",
+        LV_SYMBOL_SHUFFLE,
+        "Hardware RNG\nNIST SP 800-90B",
+        "7F2A91E4C83D05B6...",
+        {.blue = 0x00, .green = 0x98, .red = 0xFF}  /* orange */
+    },
+};
 
 /* ---------------------------------------------------------------------------
  * Context
  * --------------------------------------------------------------------------- */
 typedef struct {
     lv_obj_t    *parent;
-    lv_obj_t    *textarea;
-    lv_obj_t    *hash_label;
-    lv_obj_t    *sig_label;
-    lv_obj_t    *verify_label;
-    lv_obj_t    *step_dots[4];
-    lv_obj_t    *status_label;
+    lv_obj_t    *bars[NUM_ALGOS];
+    lv_obj_t    *result_labels[NUM_ALGOS];
+    lv_obj_t    *status_dots[NUM_ALGOS];
     lv_obj_t    *btn_run;
-    uint8_t      digest[SHA256_DIGEST_LEN];
-    uint8_t      signature[MAX_SIGNATURE_LEN];
-    uint16_t     sig_len;
-    uint8_t      pubkey[MAX_PUBKEY_LEN];
-    uint16_t     pubkey_len;
-} crypto_ctx_t;
+    lv_obj_t    *status_label;
+    lv_timer_t  *anim_timer;
+    int          current_algo;
+    int          bar_value;
+    bool         running;
+} crypto_viz_ctx_t;
 
-static crypto_ctx_t s_ctx;
-
-/* ---------------------------------------------------------------------------
- * Hex formatter
- * --------------------------------------------------------------------------- */
-static void to_hex(const uint8_t *data, size_t len, char *out, size_t out_len)
-{
-    size_t pos = 0;
-    for (size_t i = 0; i < len && pos + 2 < out_len; i++) {
-        pos += snprintf(out + pos, out_len - pos, "%02X", data[i]);
-    }
-}
+static crypto_viz_ctx_t s_ctx;
 
 /* ---------------------------------------------------------------------------
- * Update step dot
+ * Animation timer: advances progress bars sequentially
  * --------------------------------------------------------------------------- */
-static void step_update(crypto_ctx_t *ctx, int idx, lv_color_t color)
+static void anim_timer_cb(lv_timer_t *timer)
 {
-    lv_obj_set_style_bg_color(ctx->step_dots[idx], color, 0);
-}
+    crypto_viz_ctx_t *ctx = (crypto_viz_ctx_t *)lv_timer_get_user_data(timer);
 
-/* ---------------------------------------------------------------------------
- * Crypto task
- * --------------------------------------------------------------------------- */
-static void crypto_task(void *pvParameters)
-{
-    crypto_ctx_t *ctx = (crypto_ctx_t *)pvParameters;
-    char hex_buf[256];
-    cy_rslt_t res;
-
-    /* Get input text */
-    lv_lock();
-    const char *input = lv_textarea_get_text(ctx->textarea);
-    size_t input_len = strlen(input);
-    /* Copy to local buffer since LVGL text may change */
-    char input_copy[128];
-    strncpy(input_copy, input, sizeof(input_copy) - 1);
-    input_copy[sizeof(input_copy) - 1] = '\0';
-    input_len = strlen(input_copy);
-    lv_unlock();
-
-    if (input_len == 0) {
-        lv_lock();
-        lv_label_set_text(ctx->status_label, "Enter text first!");
+    if (ctx->current_algo >= NUM_ALGOS) {
+        /* All done */
+        lv_label_set_text(ctx->status_label, "All algorithms completed");
+        lv_obj_set_style_text_color(ctx->status_label, COLOR_SUCCESS, 0);
         lv_obj_remove_flag(ctx->btn_run, LV_OBJ_FLAG_HIDDEN);
-        lv_unlock();
-        vTaskDelete(NULL);
+        ctx->running = false;
+        lv_timer_delete(timer);
+        ctx->anim_timer = NULL;
         return;
     }
 
-    /* Pause touch for I2C access */
-    ipc_send_cmd(IPC_CMD_TOUCH_PAUSE, NULL, 0);
-    vTaskDelay(pdMS_TO_TICKS(50));
+    int idx = ctx->current_algo;
 
-    /* Initialize OPTIGA */
-    res = tesaiot_optiga_init();
-    if (res != CY_RSLT_SUCCESS) {
-        lv_lock();
-        lv_label_set_text(ctx->status_label, "OPTIGA init failed!");
-        step_update(ctx, 0, COLOR_ERROR);
-        lv_unlock();
-        goto done;
+    /* Show active dot */
+    lv_obj_set_style_bg_color(ctx->status_dots[idx], COLOR_ACTIVE, 0);
+
+    /* Update status */
+    char buf[64];
+    snprintf(buf, sizeof(buf), "Processing: %s (%d%%)",
+             ALGOS[idx].name, ctx->bar_value);
+    lv_label_set_text(ctx->status_label, buf);
+
+    /* Advance bar */
+    ctx->bar_value += ANIM_STEP;
+    lv_bar_set_value(ctx->bars[idx], ctx->bar_value, LV_ANIM_ON);
+
+    if (ctx->bar_value >= 100) {
+        /* This algo is done */
+        lv_obj_set_style_bg_color(ctx->status_dots[idx], COLOR_SUCCESS, 0);
+        lv_label_set_text(ctx->result_labels[idx], ALGOS[idx].result_text);
+        lv_obj_set_style_text_color(ctx->result_labels[idx], COLOR_SUCCESS, 0);
+
+        /* Move to next */
+        ctx->current_algo++;
+        ctx->bar_value = 0;
     }
-
-    /* Step 1: SHA-256 Hash */
-    lv_lock();
-    step_update(ctx, 0, COLOR_ACTIVE);
-    lv_label_set_text(ctx->status_label, "Computing SHA-256...");
-    lv_unlock();
-
-    res = tesaiot_optiga_sha256((const uint8_t *)input_copy, input_len, ctx->digest);
-    lv_lock();
-    if (res == CY_RSLT_SUCCESS) {
-        step_update(ctx, 0, COLOR_SUCCESS);
-        to_hex(ctx->digest, SHA256_DIGEST_LEN, hex_buf, sizeof(hex_buf));
-        lv_label_set_text(ctx->hash_label, hex_buf);
-    } else {
-        step_update(ctx, 0, COLOR_ERROR);
-        lv_label_set_text(ctx->status_label, "SHA-256 failed!");
-        lv_unlock();
-        goto done;
-    }
-    lv_unlock();
-
-    /* Step 2: ECDSA Sign */
-    lv_lock();
-    step_update(ctx, 1, COLOR_ACTIVE);
-    lv_label_set_text(ctx->status_label, "Signing with OPTIGA key 0xE0F1...");
-    lv_unlock();
-
-    ctx->sig_len = MAX_SIGNATURE_LEN;
-    res = tesaiot_optiga_ecdsa_sign(ctx->digest, SHA256_DIGEST_LEN,
-                                     OPTIGA_KEY_SLOT,
-                                     ctx->signature, &ctx->sig_len);
-    lv_lock();
-    if (res == CY_RSLT_SUCCESS) {
-        step_update(ctx, 1, COLOR_SUCCESS);
-        to_hex(ctx->signature, ctx->sig_len > 32 ? 32 : ctx->sig_len,
-               hex_buf, sizeof(hex_buf));
-        strcat(hex_buf, "...");
-        lv_label_set_text(ctx->sig_label, hex_buf);
-    } else {
-        step_update(ctx, 1, COLOR_ERROR);
-        lv_label_set_text(ctx->status_label, "ECDSA sign failed!");
-        lv_unlock();
-        goto done;
-    }
-    lv_unlock();
-
-    /* Step 3: Read public key for verification */
-    lv_lock();
-    step_update(ctx, 2, COLOR_ACTIVE);
-    lv_label_set_text(ctx->status_label, "Reading public key...");
-    lv_unlock();
-
-    ctx->pubkey_len = MAX_PUBKEY_LEN;
-    res = tesaiot_optiga_read_data(OPTIGA_KEY_SLOT + 0x100,
-                                    ctx->pubkey, &ctx->pubkey_len);
-    if (res != CY_RSLT_SUCCESS) {
-        /* Generate keypair if no existing key */
-        ctx->pubkey_len = MAX_PUBKEY_LEN;
-        res = tesaiot_optiga_gen_keypair(OPTIGA_KEY_SLOT,
-                                          ctx->pubkey, &ctx->pubkey_len);
-    }
-
-    lv_lock();
-    if (res == CY_RSLT_SUCCESS) {
-        step_update(ctx, 2, COLOR_SUCCESS);
-    } else {
-        step_update(ctx, 2, COLOR_ERROR);
-        lv_label_set_text(ctx->status_label, "Public key read failed!");
-        lv_unlock();
-        goto done;
-    }
-    lv_unlock();
-
-    /* Step 4: Verify signature */
-    lv_lock();
-    step_update(ctx, 3, COLOR_ACTIVE);
-    lv_label_set_text(ctx->status_label, "Verifying signature...");
-    lv_unlock();
-
-    res = tesaiot_optiga_ecdsa_verify(ctx->digest, SHA256_DIGEST_LEN,
-                                       ctx->signature, ctx->sig_len,
-                                       ctx->pubkey, ctx->pubkey_len);
-    lv_lock();
-    if (res == CY_RSLT_SUCCESS) {
-        step_update(ctx, 3, COLOR_SUCCESS);
-        lv_label_set_text(ctx->verify_label, "SIGNATURE VALID");
-        lv_obj_set_style_text_color(ctx->verify_label, COLOR_SUCCESS, 0);
-        lv_label_set_text(ctx->status_label, "All steps completed successfully!");
-        lv_obj_set_style_text_color(ctx->status_label, COLOR_SUCCESS, 0);
-    } else {
-        step_update(ctx, 3, COLOR_ERROR);
-        lv_label_set_text(ctx->verify_label, "SIGNATURE INVALID");
-        lv_obj_set_style_text_color(ctx->verify_label, COLOR_ERROR, 0);
-        lv_label_set_text(ctx->status_label, "Verification failed!");
-    }
-    lv_unlock();
-
-done:
-    /* Always resume touch */
-    ipc_send_cmd(IPC_CMD_TOUCH_RESUME, NULL, 0);
-    vTaskDelay(pdMS_TO_TICKS(50));
-
-    lv_lock();
-    lv_obj_remove_flag(ctx->btn_run, LV_OBJ_FLAG_HIDDEN);
-    lv_unlock();
-
-    vTaskDelete(NULL);
 }
 
 /* ---------------------------------------------------------------------------
- * Button callback
+ * Run button callback
  * --------------------------------------------------------------------------- */
 static void btn_run_cb(lv_event_t *e)
 {
-    crypto_ctx_t *ctx = (crypto_ctx_t *)lv_event_get_user_data(e);
+    crypto_viz_ctx_t *ctx = (crypto_viz_ctx_t *)lv_event_get_user_data(e);
+    if (ctx->running) return;
 
-    /* Reset indicators */
-    for (int i = 0; i < 4; i++) {
-        lv_obj_set_style_bg_color(ctx->step_dots[i], COLOR_PENDING, 0);
+    /* Reset all */
+    for (int i = 0; i < NUM_ALGOS; i++) {
+        lv_bar_set_value(ctx->bars[i], 0, LV_ANIM_OFF);
+        lv_label_set_text(ctx->result_labels[i], "---");
+        lv_obj_set_style_text_color(ctx->result_labels[i], COLOR_TEXT, 0);
+        lv_obj_set_style_bg_color(ctx->status_dots[i], COLOR_PENDING, 0);
     }
-    lv_label_set_text(ctx->hash_label, "---");
-    lv_label_set_text(ctx->sig_label, "---");
-    lv_label_set_text(ctx->verify_label, "---");
-    lv_obj_set_style_text_color(ctx->verify_label, COLOR_TEXT, 0);
-    lv_obj_set_style_text_color(ctx->status_label, COLOR_TEXT, 0);
-    lv_obj_add_flag(ctx->btn_run, LV_OBJ_FLAG_HIDDEN);
 
-    xTaskCreate(crypto_task, "optiga_crypto", 4096, ctx, 3, NULL);
+    ctx->current_algo = 0;
+    ctx->bar_value = 0;
+    ctx->running = true;
+    lv_obj_add_flag(ctx->btn_run, LV_OBJ_FLAG_HIDDEN);
+    lv_label_set_text(ctx->status_label, "Starting...");
+    lv_obj_set_style_text_color(ctx->status_label, COLOR_TEXT, 0);
+
+    ctx->anim_timer = lv_timer_create(anim_timer_cb, ANIM_MS, ctx);
 }
 
 /* ---------------------------------------------------------------------------
@@ -253,114 +169,98 @@ void example_main(lv_obj_t *parent)
     memset(&s_ctx, 0, sizeof(s_ctx));
     s_ctx.parent = parent;
 
-    static const char *step_names[] = {
-        "SHA-256 Hash", "ECDSA Sign", "Read PubKey", "Verify"
-    };
-
     /* Title */
     lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, LV_SYMBOL_EYE_OPEN " OPTIGA Crypto");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
+    lv_label_set_text(title, LV_SYMBOL_EYE_OPEN " Crypto Algorithm Visualization");
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
 
     /* Status */
     s_ctx.status_label = lv_label_create(parent);
-    lv_label_set_text(s_ctx.status_label, "Enter text and press Run");
+    lv_label_set_text(s_ctx.status_label, "Press Run to simulate crypto operations");
     lv_obj_set_style_text_color(s_ctx.status_label, COLOR_TEXT, 0);
-    lv_obj_align(s_ctx.status_label, LV_ALIGN_TOP_LEFT, 16, 36);
-
-    /* Input textarea */
-    s_ctx.textarea = lv_textarea_create(parent);
-    lv_obj_set_size(s_ctx.textarea, 340, 40);
-    lv_obj_align(s_ctx.textarea, LV_ALIGN_TOP_LEFT, 16, 58);
-    lv_textarea_set_placeholder_text(s_ctx.textarea, "Enter text to sign...");
-    lv_textarea_set_one_line(s_ctx.textarea, true);
-    lv_textarea_set_text(s_ctx.textarea, "Hello OPTIGA Trust M!");
+    lv_obj_align(s_ctx.status_label, LV_ALIGN_TOP_LEFT, 16, 30);
 
     /* Run button */
     s_ctx.btn_run = lv_btn_create(parent);
-    lv_obj_set_size(s_ctx.btn_run, 100, 40);
-    lv_obj_align(s_ctx.btn_run, LV_ALIGN_TOP_LEFT, 368, 58);
+    lv_obj_set_size(s_ctx.btn_run, 120, 36);
+    lv_obj_align(s_ctx.btn_run, LV_ALIGN_TOP_RIGHT, -16, 26);
     lv_obj_set_style_bg_color(s_ctx.btn_run, COLOR_ACCENT, 0);
+    lv_obj_set_style_radius(s_ctx.btn_run, 8, 0);
     lv_obj_add_event_cb(s_ctx.btn_run, btn_run_cb, LV_EVENT_CLICKED, &s_ctx);
-    lv_obj_t *rl = lv_label_create(s_ctx.btn_run);
-    lv_label_set_text(rl, LV_SYMBOL_PLAY " Run");
-    lv_obj_center(rl);
 
-    /* Step indicators (horizontal) */
-    lv_obj_t *steps = lv_obj_create(parent);
-    lv_obj_set_size(steps, 560, 36);
-    lv_obj_align(steps, LV_ALIGN_TOP_MID, 0, 104);
-    lv_obj_set_style_bg_opa(steps, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(steps, 0, 0);
-    lv_obj_set_style_pad_all(steps, 0, 0);
-    lv_obj_set_flex_flow(steps, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(steps, LV_FLEX_ALIGN_SPACE_EVENLY,
-                          LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_t *btn_lbl = lv_label_create(s_ctx.btn_run);
+    lv_label_set_text(btn_lbl, LV_SYMBOL_PLAY " Run");
+    lv_obj_center(btn_lbl);
 
-    for (int i = 0; i < 4; i++) {
-        lv_obj_t *chip = lv_obj_create(steps);
-        lv_obj_set_size(chip, 120, 28);
-        lv_obj_set_style_bg_color(chip, COLOR_BG, 0);
-        lv_obj_set_style_border_width(chip, 1, 0);
-        lv_obj_set_style_border_color(chip, COLOR_ACCENT, 0);
-        lv_obj_set_style_radius(chip, 14, 0);
-        lv_obj_set_style_pad_hor(chip, 6, 0);
-        lv_obj_set_flex_flow(chip, LV_FLEX_FLOW_ROW);
-        lv_obj_set_flex_align(chip, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER,
-                              LV_FLEX_ALIGN_CENTER);
-        lv_obj_set_style_pad_column(chip, 6, 0);
+    /* Algorithm cards */
+    int card_w = 370;
+    int card_h = 80;
+    int start_y = 66;
+    int gap = 6;
 
-        s_ctx.step_dots[i] = lv_obj_create(chip);
-        lv_obj_set_size(s_ctx.step_dots[i], 12, 12);
-        lv_obj_set_style_radius(s_ctx.step_dots[i], LV_RADIUS_CIRCLE, 0);
-        lv_obj_set_style_bg_color(s_ctx.step_dots[i], COLOR_PENDING, 0);
-        lv_obj_set_style_bg_opa(s_ctx.step_dots[i], LV_OPA_COVER, 0);
-        lv_obj_set_style_border_width(s_ctx.step_dots[i], 0, 0);
+    for (int i = 0; i < NUM_ALGOS; i++) {
+        int col = (i % 2);
+        int row = (i / 2);
+        int x = 8 + col * (card_w + 8);
+        int y = start_y + row * (card_h + gap);
 
-        lv_obj_t *lbl = lv_label_create(chip);
-        lv_label_set_text(lbl, step_names[i]);
-        lv_obj_set_style_text_color(lbl, COLOR_TEXT, 0);
+        lv_obj_t *card = lv_obj_create(parent);
+        lv_obj_set_size(card, card_w, card_h);
+        lv_obj_set_pos(card, x, y);
+        lv_obj_set_style_bg_color(card, COLOR_CARD, 0);
+        lv_obj_set_style_border_color(card, ALGOS[i].color, 0);
+        lv_obj_set_style_border_width(card, 1, 0);
+        lv_obj_set_style_radius(card, 8, 0);
+        lv_obj_set_style_pad_all(card, 8, 0);
+        lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+
+        /* Status dot */
+        s_ctx.status_dots[i] = lv_obj_create(card);
+        lv_obj_set_size(s_ctx.status_dots[i], 12, 12);
+        lv_obj_set_style_radius(s_ctx.status_dots[i], LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(s_ctx.status_dots[i], COLOR_PENDING, 0);
+        lv_obj_set_style_bg_opa(s_ctx.status_dots[i], LV_OPA_COVER, 0);
+        lv_obj_set_style_border_width(s_ctx.status_dots[i], 0, 0);
+        lv_obj_align(s_ctx.status_dots[i], LV_ALIGN_TOP_LEFT, 0, 2);
+
+        /* Name + icon */
+        lv_obj_t *name = lv_label_create(card);
+        char name_buf[64];
+        snprintf(name_buf, sizeof(name_buf), "%s %s", ALGOS[i].icon, ALGOS[i].name);
+        lv_label_set_text(name, name_buf);
+        lv_obj_set_style_text_color(name, ALGOS[i].color, 0);
+        lv_obj_set_style_text_font(name, &lv_font_montserrat_16, 0);
+        lv_obj_align(name, LV_ALIGN_TOP_LEFT, 18, 0);
+
+        /* Description */
+        lv_obj_t *desc = lv_label_create(card);
+        lv_label_set_text(desc, ALGOS[i].description);
+        lv_obj_set_style_text_color(desc, COLOR_TEXT, 0);
+        lv_obj_align(desc, LV_ALIGN_TOP_RIGHT, -4, 0);
+
+        /* Progress bar */
+        s_ctx.bars[i] = lv_bar_create(card);
+        lv_obj_set_size(s_ctx.bars[i], 200, 10);
+        lv_bar_set_range(s_ctx.bars[i], 0, 100);
+        lv_bar_set_value(s_ctx.bars[i], 0, LV_ANIM_OFF);
+        lv_obj_set_style_bg_color(s_ctx.bars[i], COLOR_BAR_BG, 0);
+        lv_obj_set_style_bg_color(s_ctx.bars[i], ALGOS[i].color, LV_PART_INDICATOR);
+        lv_obj_set_style_radius(s_ctx.bars[i], 4, 0);
+        lv_obj_set_style_radius(s_ctx.bars[i], 4, LV_PART_INDICATOR);
+        lv_obj_align(s_ctx.bars[i], LV_ALIGN_BOTTOM_LEFT, 0, 0);
+
+        /* Result label */
+        s_ctx.result_labels[i] = lv_label_create(card);
+        lv_label_set_text(s_ctx.result_labels[i], "---");
+        lv_obj_set_style_text_color(s_ctx.result_labels[i], COLOR_TEXT, 0);
+        lv_obj_align(s_ctx.result_labels[i], LV_ALIGN_BOTTOM_RIGHT, -4, 0);
     }
 
-    /* Results panel */
-    lv_obj_t *results = lv_obj_create(parent);
-    lv_obj_set_size(results, 560, 200);
-    lv_obj_align(results, LV_ALIGN_TOP_MID, 0, 146);
-    lv_obj_set_style_bg_color(results, COLOR_BG, 0);
-    lv_obj_set_style_border_color(results, COLOR_ACCENT, 0);
-    lv_obj_set_style_border_width(results, 1, 0);
-    lv_obj_set_style_radius(results, 8, 0);
-    lv_obj_set_style_pad_all(results, 12, 0);
-    lv_obj_set_flex_flow(results, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_row(results, 6, 0);
-
-    /* Hash */
-    lv_obj_t *h_title = lv_label_create(results);
-    lv_label_set_text(h_title, "SHA-256 Hash:");
-    lv_obj_set_style_text_color(h_title, COLOR_ACTIVE, 0);
-
-    s_ctx.hash_label = lv_label_create(results);
-    lv_label_set_text(s_ctx.hash_label, "---");
-    lv_obj_set_style_text_color(s_ctx.hash_label, COLOR_TEXT, 0);
-    lv_label_set_long_mode(s_ctx.hash_label, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(s_ctx.hash_label, 530);
-
-    /* Signature */
-    lv_obj_t *s_title = lv_label_create(results);
-    lv_label_set_text(s_title, "ECDSA Signature:");
-    lv_obj_set_style_text_color(s_title, COLOR_ACTIVE, 0);
-
-    s_ctx.sig_label = lv_label_create(results);
-    lv_label_set_text(s_ctx.sig_label, "---");
-    lv_obj_set_style_text_color(s_ctx.sig_label, COLOR_TEXT, 0);
-    lv_label_set_long_mode(s_ctx.sig_label, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(s_ctx.sig_label, 530);
-
-    /* Verification result */
-    s_ctx.verify_label = lv_label_create(results);
-    lv_label_set_text(s_ctx.verify_label, "---");
-    lv_obj_set_style_text_font(s_ctx.verify_label, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(s_ctx.verify_label, COLOR_TEXT, 0);
+    /* Info note at bottom */
+    lv_obj_t *note = lv_label_create(parent);
+    lv_label_set_text(note, "Visualization only — actual OPTIGA Trust M operations require I2C bus access");
+    lv_obj_set_style_text_color(note, COLOR_PENDING, 0);
+    lv_obj_align(note, LV_ALIGN_BOTTOM_MID, 0, -6);
 }

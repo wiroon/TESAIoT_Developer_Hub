@@ -1,0 +1,10 @@
+{
+  "title": "Predictive Alert Engine",
+  "description": "Analyzes sensor trends with linear regression, predicts threshold crossings, and displays tiered alerts",
+  "difficulty": "advanced",
+  "domain": "Analytics",
+  "tags": ["analytics", "automation", "sensor", "real-time"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": true
+}

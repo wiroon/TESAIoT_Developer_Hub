@@ -1,0 +1,10 @@
+{
+  "title": "Card Layout",
+  "description": "Golden-ratio card layout with title, subtitle, and value for a dashboard",
+  "difficulty": "beginner",
+  "domain": "UI Widgets",
+  "tags": ["lvgl", "grid", "card", "embedded"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": false
+}

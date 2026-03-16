@@ -1,0 +1,10 @@
+{
+  "title": "Home Automation",
+  "description": "Smart home dashboard with room monitoring, device control switches, outdoor sensor readings, and energy tracking",
+  "difficulty": "advanced",
+  "domain": "Automation",
+  "tags": ["automation", "dashboard", "sensor", "integrations"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": true
+}

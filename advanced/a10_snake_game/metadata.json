@@ -1,0 +1,10 @@
+{
+  "title": "Snake Game",
+  "description": "Classic snake game with touch button and tilt controls, growing snake, food spawning, and wraparound grid",
+  "difficulty": "advanced",
+  "domain": "Game",
+  "tags": ["game", "lvgl", "event", "timer"],
+  "boards": ["KIT_PSE84_AI", "KIT_PSE84_EVAL_EPC2"],
+  "files": ["main_example.c"],
+  "requires_sensors": false
+}

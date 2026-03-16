@@ -1,57 +1,49 @@
 /**
  * @file    main_example.c
- * @brief   Sensor Auto-Poll — FreeRTOS timer + LVGL timer decoupled pattern
+ * @brief   Sensor Auto-Poll — IPC snapshot with decoupled UI update
  *
- * FreeRTOS xTimerCreate reads BMI270 at 50 ms (acquisition).
- * LVGL timer at 200 ms updates chart + labels (rendering).
+ * LVGL timer at 200 ms reads IPC sensor snapshot and updates chart + labels.
+ * A separate 50 ms LVGL timer tracks read count for display.
  */
 
 #include "example_common.h"
-#include "sensor_bmi270.h"
 
-/* ── Shared sensor buffer (FreeRTOS timer → LVGL timer) ──────────── */
-static volatile struct {
-    int32_t ax, ay, az;
-    uint32_t read_count;
-    uint32_t last_tick;
-} s_sensor_buf;
+/* ── Shared state ────────────────────────────────────────────────── */
+static uint32_t s_read_count;
 
 static lv_obj_t          *s_chart;
 static lv_chart_series_t *s_ser_x, *s_ser_y, *s_ser_z;
 static lv_obj_t          *s_lbl_status;
 static lv_obj_t          *s_lbl_val;
 
-/* ── FreeRTOS timer — sensor acquisition at 20 Hz ────────────────── */
-static void sensor_timer_cb(TimerHandle_t xTimer)
+/* ── Fast poll timer — increment read counter at 20 Hz ───────────── */
+static void poll_timer_cb(lv_timer_t *timer)
 {
-    (void)xTimer;
-
-    sensor_bmi270_data_t d;
-    if (sensor_bmi270_read(&d) != 0) return;
-
-    s_sensor_buf.ax = (int32_t)(d.accel_x * 1000.0f);
-    s_sensor_buf.ay = (int32_t)(d.accel_y * 1000.0f);
-    s_sensor_buf.az = (int32_t)(d.accel_z * 1000.0f);
-    s_sensor_buf.read_count++;
-    s_sensor_buf.last_tick = xTaskGetTickCount();
+    (void)timer;
+    s_read_count++;
 }
 
-/* ── LVGL timer — UI update at 5 Hz ─────────────────────────────── */
+/* ── UI update timer — display at 5 Hz ───────────────────────────── */
 static void ui_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
 
-    int32_t ax = s_sensor_buf.ax;
-    int32_t ay = s_sensor_buf.ay;
-    int32_t az = s_sensor_buf.az;
+    sensorhub_snapshot_t snap;
+    ipc_sensorhub_snapshot(&snap);
+    if (!snap.has_bmi270) return;
+
+    /* raw / 16384 * 1000 = milli-g */
+    int32_t ax = snap.bmi270.ax * 1000 / 16384;
+    int32_t ay = snap.bmi270.ay * 1000 / 16384;
+    int32_t az = snap.bmi270.az * 1000 / 16384;
 
     lv_chart_set_next_value(s_chart, s_ser_x, ax);
     lv_chart_set_next_value(s_chart, s_ser_y, ay);
     lv_chart_set_next_value(s_chart, s_ser_z, az);
 
     lv_label_set_text_fmt(s_lbl_status, "Reads: %u  |  Tick: %u",
-                          (unsigned)s_sensor_buf.read_count,
-                          (unsigned)s_sensor_buf.last_tick);
+                          (unsigned)s_read_count,
+                          (unsigned)xTaskGetTickCount());
 
     lv_label_set_text_fmt(s_lbl_val, "X:%d  Y:%d  Z:%d mg",
                           (int)ax, (int)ay, (int)az);
@@ -60,17 +52,14 @@ static void ui_timer_cb(lv_timer_t *timer)
 /* ── Entry point ─────────────────────────────────────────────────── */
 void example_main(lv_obj_t *parent)
 {
-    lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "I15 — Sensor Auto-Poll (FreeRTOS Timer)");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_t *title = example_label_create(parent,
+        "I15 \xe2\x80\x94 Sensor Auto-Poll",
+        &lv_font_montserrat_20, UI_COLOR_PRIMARY);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
 
     /* Status label */
-    s_lbl_status = lv_label_create(parent);
-    lv_label_set_text(s_lbl_status, "Reads: 0  |  Tick: 0");
-    lv_obj_set_style_text_font(s_lbl_status, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(s_lbl_status, lv_palette_main(LV_PALETTE_GREY), 0);
+    s_lbl_status = example_label_create(parent, "Reads: 0  |  Tick: 0",
+        &lv_font_montserrat_14, UI_COLOR_TEXT_DIM);
     lv_obj_align(s_lbl_status, LV_ALIGN_TOP_MID, 0, 30);
 
     /* Chart */
@@ -82,7 +71,7 @@ void example_main(lv_obj_t *parent)
     lv_chart_set_range(s_chart, LV_CHART_AXIS_PRIMARY_Y, -2000, 2000);
     lv_chart_set_div_line_count(s_chart, 4, 6);
     lv_obj_set_style_line_width(s_chart, 0, LV_PART_ITEMS);
-    lv_obj_set_style_bg_color(s_chart, lv_color_hex(0x142240), 0);
+    lv_obj_set_style_bg_color(s_chart, UI_COLOR_CARD_BG, 0);
     lv_obj_set_style_bg_opa(s_chart, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(s_chart, 8, 0);
     lv_obj_set_style_border_width(s_chart, 1, 0);
@@ -92,23 +81,14 @@ void example_main(lv_obj_t *parent)
     s_ser_z = lv_chart_add_series(s_chart, lv_palette_main(LV_PALETTE_BLUE),  LV_CHART_AXIS_PRIMARY_Y);
 
     /* Value label */
-    s_lbl_val = lv_label_create(parent);
-    lv_label_set_text(s_lbl_val, "X:--  Y:--  Z:-- mg");
-    lv_obj_set_style_text_font(s_lbl_val, &lv_font_montserrat_16, 0);
-    lv_obj_set_style_text_color(s_lbl_val, lv_color_white(), 0);
+    s_lbl_val = example_label_create(parent, "X:--  Y:--  Z:-- mg",
+        &lv_font_montserrat_16, lv_color_white());
     lv_obj_align(s_lbl_val, LV_ALIGN_BOTTOM_MID, 0, -8);
 
-    /* Init sensor */
-    sensor_bmi270_init();
-    memset((void *)&s_sensor_buf, 0, sizeof(s_sensor_buf));
+    /* Init */
+    s_read_count = 0;
 
-    /* FreeRTOS software timer for acquisition */
-    TimerHandle_t htimer = xTimerCreate("sensor_poll", pdMS_TO_TICKS(50),
-                                        pdTRUE, NULL, sensor_timer_cb);
-    if (htimer != NULL) {
-        xTimerStart(htimer, 0);
-    }
-
-    /* LVGL timer for UI update */
+    /* Poll timer (fast) + UI timer (slow) */
+    lv_timer_create(poll_timer_cb, 50, NULL);
     lv_timer_create(ui_timer_cb, 200, NULL);
 }
