@@ -45,7 +45,7 @@ static void init_certs(app_ctx_t *ctx)
 {
     ctx->certs[0] = (cert_info_t){
         .cn = "PSoC E84 Device 001",
-        .issuer = "BENTO Intermediate CA",
+        .issuer = "TESAIoT Intermediate CA",
         .serial = "7A:3F:C2:01:88:DE:00:01",
         .not_before = "2025-01-15 00:00:00 UTC",
         .not_after  = "2027-01-15 23:59:59 UTC",
@@ -56,8 +56,8 @@ static void init_certs(app_ctx_t *ctx)
         .days_left = 672,
     };
     ctx->certs[1] = (cert_info_t){
-        .cn = "BENTO Intermediate CA",
-        .issuer = "BENTO Root CA",
+        .cn = "TESAIoT Intermediate CA",
+        .issuer = "TESAIoT Root CA",
         .serial = "3B:AF:11:00:00:00:00:02",
         .not_before = "2024-06-01 00:00:00 UTC",
         .not_after  = "2034-06-01 23:59:59 UTC",
@@ -68,8 +68,8 @@ static void init_certs(app_ctx_t *ctx)
         .days_left = 3000,
     };
     ctx->certs[2] = (cert_info_t){
-        .cn = "BENTO Root CA",
-        .issuer = "BENTO Root CA (self-signed)",
+        .cn = "TESAIoT Root CA",
+        .issuer = "TESAIoT Root CA (self-signed)",
         .serial = "01:00:00:00:00:00:00:01",
         .not_before = "2024-01-01 00:00:00 UTC",
         .not_after  = "2044-01-01 23:59:59 UTC",
@@ -160,6 +160,13 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_text_color(title, UI_COLOR_TEXT, 0);
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_pos(title, 16, 10);
+
+    /* ดูใบรับรองดิจิทัล */
+    lv_obj_t *th_sub = lv_label_create(parent);
+    lv_label_set_text(th_sub, "ดูใบรับรองดิจิทัล");
+    lv_obj_set_style_text_font(th_sub, &lv_font_noto_thai_14, 0);
+    lv_obj_set_style_text_color(th_sub, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_set_pos(th_sub, 16, 32);
 
     /* Chain visualization (top right) */
     lv_obj_t *chain_panel = lv_obj_create(parent);

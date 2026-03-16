@@ -299,6 +299,13 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_text_font(ctx->title_label, &lv_font_montserrat_20, 0);
     lv_obj_align(ctx->title_label, LV_ALIGN_TOP_MID, 0, 36);
 
+    /* จัดการรหัส PIN */
+    lv_obj_t *th_sub = lv_label_create(left);
+    lv_label_set_text(th_sub, "จัดการรหัส PIN");
+    lv_obj_set_style_text_font(th_sub, &lv_font_noto_thai_14, 0);
+    lv_obj_set_style_text_color(th_sub, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_align(th_sub, LV_ALIGN_TOP_MID, 0, 58);
+
     /* PIN dots */
     lv_coord_t dot_start_x = (240 - 32 - (PIN_LEN * 24 + (PIN_LEN - 1) * 16)) / 2;
     for (int i = 0; i < PIN_LEN; i++) {
