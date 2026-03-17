@@ -210,6 +210,10 @@ INCLUDES+=$(BENTO_COMMON)/modules/ipc_ui
 SOURCES+=$(wildcard app/*.c)
 INCLUDES+=app
 
+# UI bridge + Thai fonts (shared BENTO infrastructure)
+SOURCES+=$(wildcard $(BENTO_COMMON)/modules/ui_bridge/*.c)
+INCLUDES+=$(BENTO_COMMON)/modules/ui_bridge
+
 # sensorhub_ui — still needed for page helpers/theme, but demos are excluded
 INCLUDES+=modules/sensorhub_ui
 
