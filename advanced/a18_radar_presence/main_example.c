@@ -1,10 +1,10 @@
 /**
  * @file    main_example.c
- * @brief   Radar Presence Detection - BGT60TR13C sweep + range display
+ * @brief   Radar Presence Detection - BGT60TR13C sweep + energy display
  *
  * @description
- *   Animated radar sweep, presence indicator, and range bar using the
- *   BGT60TR13C 60 GHz radar sensor. Polls radar_task for presence state.
+ *   Animated radar sweep, presence indicator, and signal energy bar using the
+ *   BGT60TR13C 60 GHz radar sensor. Reads volatile globals from tesaiot_radar_task.
  *
  * @board    AI Kit (KIT_PSE84_AI) only - BGT60TR13C
  * @author   TESAIoT
@@ -17,16 +17,18 @@
 #define RADAR_ARC_SIZE   240
 #define SWEEP_ARC_SPAN    30     /* Degrees for the sweep arc        */
 #define SWEEP_STEP         3     /* Degrees per timer tick            */
-#define RANGE_BAR_W      300
-#define RANGE_BAR_H       20
-#define MAX_RANGE_CM     500     /* Max displayable range in cm       */
+#define ENERGY_BAR_W     300
+#define ENERGY_BAR_H      20
+#define ENERGY_BAR_MAX   100    /* Bar range 0-100%                  */
+#define ENERGY_FLOOR   100000.0f    /* 100K = 0% (quiet baseline)    */
+#define ENERGY_CEIL  10000000.0f    /* 10M = 100% (close presence)   */
 
 /* ── State ──────────────────────────────────────────────────────── */
 static lv_obj_t *s_sweep_arc;
 static lv_obj_t *s_presence_dot;
 static lv_obj_t *s_lbl_state;
-static lv_obj_t *s_lbl_range;
-static lv_obj_t *s_range_bar;
+static lv_obj_t *s_lbl_energy;
+static lv_obj_t *s_energy_bar;
 static int32_t   s_sweep_angle = 0;
 
 /* ── Sweep animation timer ──────────────────────────────────────── */
@@ -40,10 +42,15 @@ static void sweep_timer_cb(lv_timer_t *t)
                       s_sweep_angle,
                       s_sweep_angle + SWEEP_ARC_SPAN);
 
-    /* Read radar state */
-    bool presence = false;
-    float range_cm = 0.0f;
-    radar_get_presence(&presence, &range_cm);
+    /* Read radar state from volatile globals (set by tesaiot_radar_task) */
+    if (!tesaiot_radar_initialized) {
+        lv_label_set_text(s_lbl_state, "RADAR NOT READY...");
+        lv_obj_set_style_text_color(s_lbl_state, lv_color_hex(0xFF9800), 0);
+        return;
+    }
+
+    bool presence = tesaiot_radar_presence_detected;
+    float energy  = tesaiot_radar_current_energy;
 
     /* Update presence indicator */
     if (presence) {
@@ -58,11 +65,16 @@ static void sweep_timer_cb(lv_timer_t *t)
         lv_obj_set_style_text_color(s_lbl_state, UI_COLOR_TEXT_DIM, 0);
     }
 
-    /* Update range */
-    int32_t range_int = (int32_t)range_cm;
-    if (range_int > MAX_RANGE_CM) range_int = MAX_RANGE_CM;
-    lv_bar_set_value(s_range_bar, range_int, LV_ANIM_ON);
-    lv_label_set_text_fmt(s_lbl_range, "Range: %d cm", range_int);
+    /* Update energy bar: linear 0-100% between FLOOR and CEIL */
+    int32_t pct = 0;
+    if (energy > ENERGY_FLOOR) {
+        float range = ENERGY_CEIL - ENERGY_FLOOR;
+        pct = (int32_t)(((energy - ENERGY_FLOOR) / range) * 100.0f);
+        if (pct < 0)   pct = 0;
+        if (pct > 100)  pct = 100;
+    }
+    lv_bar_set_value(s_energy_bar, pct, LV_ANIM_ON);
+    lv_label_set_text_fmt(s_lbl_energy, "%d%%  (raw: %.0f)", (int)pct, (double)energy);
 }
 
 /* ── Entry point ─────────────────────────────────────────────────── */
@@ -70,16 +82,13 @@ void example_main(lv_obj_t *parent)
 {
     /* Title */
     lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "A17 \xe2\x80\x94 Radar Presence");
+    lv_label_set_text(title, "A18 - Radar Presence");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(title, UI_COLOR_RADAR, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
-    /* เรดาร์ตรวจจับคน */
-    lv_obj_t *th_sub = example_label_create(parent,
-        "เรดาร์ตรวจจับคน",
-        &lv_font_noto_thai_14, UI_COLOR_TEXT_DIM);
-    lv_obj_align(th_sub, LV_ALIGN_TOP_MID, 0, 34);
 
+    lv_obj_t *th_sub = thai_label(parent, "เรดาร์ตรวจจับคน", 14, UI_COLOR_TEXT_DIM);
+    lv_obj_align(th_sub, LV_ALIGN_TOP_MID, 0, 34);
 
     /* === Radar display area === */
     lv_obj_t *radar_bg = example_card_create(parent, RADAR_ARC_SIZE + 20,
@@ -134,30 +143,30 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_text_color(s_lbl_state, UI_COLOR_TEXT_DIM, 0);
     lv_obj_align_to(s_lbl_state, radar_bg, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 
-    /* Range bar */
-    lv_obj_t *range_card = example_card_create(parent, RANGE_BAR_W + 40,
+    /* Energy bar */
+    lv_obj_t *energy_card = example_card_create(parent, ENERGY_BAR_W + 40,
                                                 60, UI_COLOR_CARD_BG);
-    lv_obj_align(range_card, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_obj_align(energy_card, LV_ALIGN_BOTTOM_MID, 0, -10);
 
-    s_lbl_range = lv_label_create(range_card);
-    lv_label_set_text(s_lbl_range, "Range: -- cm");
-    lv_obj_set_style_text_font(s_lbl_range, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(s_lbl_range, UI_COLOR_TEXT, 0);
-    lv_obj_align(s_lbl_range, LV_ALIGN_TOP_LEFT, 0, 0);
+    s_lbl_energy = lv_label_create(energy_card);
+    lv_label_set_text(s_lbl_energy, "Energy: --");
+    lv_obj_set_style_text_font(s_lbl_energy, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(s_lbl_energy, UI_COLOR_TEXT, 0);
+    lv_obj_align(s_lbl_energy, LV_ALIGN_TOP_LEFT, 0, 0);
 
-    s_range_bar = lv_bar_create(range_card);
-    lv_obj_set_size(s_range_bar, RANGE_BAR_W, RANGE_BAR_H);
-    lv_bar_set_range(s_range_bar, 0, MAX_RANGE_CM);
-    lv_bar_set_value(s_range_bar, 0, LV_ANIM_OFF);
-    lv_obj_set_style_bg_color(s_range_bar, lv_color_hex(0x1a3050), 0);
-    lv_obj_set_style_bg_color(s_range_bar, UI_COLOR_RADAR, LV_PART_INDICATOR);
-    lv_obj_set_style_radius(s_range_bar, 4, 0);
-    lv_obj_set_style_radius(s_range_bar, 4, LV_PART_INDICATOR);
-    lv_obj_align(s_range_bar, LV_ALIGN_BOTTOM_MID, 0, 0);
+    s_energy_bar = lv_bar_create(energy_card);
+    lv_obj_set_size(s_energy_bar, ENERGY_BAR_W, ENERGY_BAR_H);
+    lv_bar_set_range(s_energy_bar, 0, ENERGY_BAR_MAX);
+    lv_bar_set_value(s_energy_bar, 0, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(s_energy_bar, lv_color_hex(0x1a3050), 0);
+    lv_obj_set_style_bg_color(s_energy_bar, UI_COLOR_RADAR, LV_PART_INDICATOR);
+    lv_obj_set_style_radius(s_energy_bar, 4, 0);
+    lv_obj_set_style_radius(s_energy_bar, 4, LV_PART_INDICATOR);
+    lv_obj_align(s_energy_bar, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    /* Initialize radar */
-    radar_task_init();
+    /* Radar task is started automatically by firmware — no init needed here.
+     * We just read the volatile globals set by tesaiot_radar_task(). */
 
-    /* Timer: 50ms sweep animation + 200ms sensor poll */
+    /* Timer: 50ms sweep animation + sensor poll */
     lv_timer_create(sweep_timer_cb, 50, NULL);
 }

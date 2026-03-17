@@ -23,7 +23,7 @@ void page_hello_create(lv_obj_t *parent)
 
     /* Styled sub-text */
     lv_obj_t *lbl_sub = lv_label_create(parent);
-    lv_label_set_text(lbl_sub, "PSoC Edge E84 — LVGL 9.2");
+    lv_label_set_text(lbl_sub, "PSoC Edge E84 - LVGL 9.2");
     lv_obj_set_style_text_font(lbl_sub, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(lbl_sub, UI_COLOR_TEXT_DIM, 0);
     lv_obj_align(lbl_sub, LV_ALIGN_CENTER, 0, 10);

@@ -169,7 +169,7 @@ void example_main(lv_obj_t *parent)
 {
     /* Title */
     lv_obj_t *title = lv_label_create(parent);
-    lv_label_set_text(title, "A19 \xe2\x80\x94 Production Dashboard");
+    lv_label_set_text(title, "A19 - Production Dashboard");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(title, UI_COLOR_PRIMARY, 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 2);

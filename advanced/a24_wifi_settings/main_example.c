@@ -358,10 +358,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);
 
     /* Thai */
-    lv_obj_t *th = lv_label_create(parent);
-    lv_label_set_text(th, "\xe0\xb8\x95\xe0\xb8\xb1\xe0\xb9\x89\xe0\xb8\x87\xe0\xb8\x84\xe0\xb9\x88\xe0\xb8\xb2 WiFi");
-    lv_obj_set_style_text_font(th, &lv_font_noto_thai_14, 0);
-    lv_obj_set_style_text_color(th, UI_COLOR_TEXT_DIM, 0);
+    lv_obj_t *th = thai_label(parent, "ตั้งค่า WiFi", 14, UI_COLOR_TEXT_DIM);
     lv_obj_align(th, LV_ALIGN_TOP_LEFT, 12, 8);
 
     /* Card */
