@@ -26,8 +26,8 @@ static bool      s_paused;
 static void send_touch_pause(void)
 {
     s_tx_msg.cmd = IPC_CMD_TOUCH_PAUSE;
-    Cy_IPC_Pipe_SendMessage(CY_IPC_EP_CYPIPE_CM55_ADDR,
-                            CY_IPC_EP_CYPIPE_CM33_ADDR,
+    Cy_IPC_Pipe_SendMessage(CM33_IPC_PIPE_EP_ADDR,
+                            CM55_IPC_PIPE_EP_ADDR,
                             (uint32_t *)&s_tx_msg, NULL);
 }
 
@@ -35,8 +35,8 @@ static void send_touch_pause(void)
 static void send_touch_resume(void)
 {
     s_tx_msg.cmd = IPC_CMD_TOUCH_RESUME;
-    Cy_IPC_Pipe_SendMessage(CY_IPC_EP_CYPIPE_CM55_ADDR,
-                            CY_IPC_EP_CYPIPE_CM33_ADDR,
+    Cy_IPC_Pipe_SendMessage(CM33_IPC_PIPE_EP_ADDR,
+                            CM55_IPC_PIPE_EP_ADDR,
                             (uint32_t *)&s_tx_msg, NULL);
 }
 

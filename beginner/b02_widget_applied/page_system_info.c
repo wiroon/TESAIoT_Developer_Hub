@@ -21,13 +21,11 @@ static void sysinfo_timer_cb(lv_timer_t *t)
     lv_label_set_text_fmt(s_lbl_uptime, "Uptime: %"PRIu32"h %02"PRIu32"m %02"PRIu32"s",
                           hrs, mins % 60, secs % 60);
 
-    /* Free heap */
-    size_t free_heap = xPortGetFreeHeapSize();
-    lv_label_set_text_fmt(s_lbl_heap, "Free Heap: %u bytes", (unsigned)free_heap);
+    /* Display: 800x480 DSI */
+    lv_label_set_text(s_lbl_heap, "Display: 800x480 DSI");
 
-    /* Task count */
-    UBaseType_t task_count = uxTaskGetNumberOfTasks();
-    lv_label_set_text_fmt(s_lbl_tasks, "Tasks: %u", (unsigned)task_count);
+    /* Core info */
+    lv_label_set_text(s_lbl_tasks, "Core: CM55 (LVGL 9.2)");
 }
 
 void page_system_info_create(lv_obj_t *parent)

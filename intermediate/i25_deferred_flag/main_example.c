@@ -65,8 +65,8 @@ static void deferred_poll_cb(lv_timer_t *timer)
         s_tx_msg.data[0] = s_reply_data;
 
         cy_en_ipc_pipe_status_t st =
-            Cy_IPC_Pipe_SendMessage(CY_IPC_EP_CYPIPE_CM33_ADDR,
-                                    CY_IPC_EP_CYPIPE_CM55_ADDR,
+            Cy_IPC_Pipe_SendMessage(CM33_IPC_PIPE_EP_ADDR,
+                                    CM55_IPC_PIPE_EP_ADDR,
                                     (uint32_t *)&s_tx_msg, NULL);
 
         if (st == CY_IPC_PIPE_SUCCESS) {
@@ -136,7 +136,7 @@ void example_main(lv_obj_t *parent)
     s_tx_count   = 0;
 
     /* Register callback + start poll timer */
-    Cy_IPC_Pipe_RegisterCallback(CY_IPC_EP_CYPIPE_CM55_ADDR,
+    Cy_IPC_Pipe_RegisterCallback(CM55_IPC_PIPE_EP_ADDR,
                                   ipc_isr_handler, IPC_CMD_DEFERRED_REQ);
     lv_timer_create(deferred_poll_cb, 20, NULL);
 }

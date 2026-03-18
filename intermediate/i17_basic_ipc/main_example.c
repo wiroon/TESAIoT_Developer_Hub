@@ -45,8 +45,8 @@ static void send_ping(void)
     s_tx_msg.cmd     = IPC_CMD_PING;
     s_tx_msg.data[0] = (uint8_t)(s_counter & 0xFF);
 
-    Cy_IPC_Pipe_SendMessage(CY_IPC_EP_CYPIPE_CM33_ADDR,
-                            CY_IPC_EP_CYPIPE_CM55_ADDR,
+    Cy_IPC_Pipe_SendMessage(CM33_IPC_PIPE_EP_ADDR,
+                            CM55_IPC_PIPE_EP_ADDR,
                             (uint32_t *)&s_tx_msg, NULL);
 }
 
@@ -72,8 +72,8 @@ static void poll_timer_cb(lv_timer_t *timer)
         s_tx_msg.cmd     = IPC_CMD_PONG;
         s_tx_msg.data[0] = (uint8_t)(s_counter & 0xFF);
 
-        Cy_IPC_Pipe_SendMessage(CY_IPC_EP_CYPIPE_CM33_ADDR,
-                                CY_IPC_EP_CYPIPE_CM55_ADDR,
+        Cy_IPC_Pipe_SendMessage(CM33_IPC_PIPE_EP_ADDR,
+                                CM55_IPC_PIPE_EP_ADDR,
                                 (uint32_t *)&s_tx_msg, NULL);
 
         lv_label_set_text(s_lbl_dir, "Direction: CM55 -> CM33 (PONG)");
@@ -130,7 +130,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_align(warn, LV_ALIGN_BOTTOM_MID, 0, -10);
 
     /* Register IPC callback + start poll timer */
-    Cy_IPC_Pipe_RegisterCallback(CY_IPC_EP_CYPIPE_CM55_ADDR,
+    Cy_IPC_Pipe_RegisterCallback(CM55_IPC_PIPE_EP_ADDR,
                                   ipc_rx_cb, IPC_CMD_PING);
     s_counter   = 0;
     s_need_pong = false;

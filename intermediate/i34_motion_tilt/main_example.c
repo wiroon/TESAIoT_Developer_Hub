@@ -89,7 +89,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_bg_color(ctx.area, UI_COLOR_CARD_BG, 0);
     lv_obj_set_style_bg_opa(ctx.area, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(ctx.area, UI_CARD_RADIUS, 0);
-    lv_obj_set_style_border_color(ctx.area, UI_COLOR_SENSOR_IMU, 0);
+    lv_obj_set_style_border_color(ctx.area, lv_color_hex(0x4CAF50), 0);
     lv_obj_set_style_border_width(ctx.area, 2, 0);
     lv_obj_set_style_pad_all(ctx.area, 0, 0);
     lv_obj_clear_flag(ctx.area, LV_OBJ_FLAG_SCROLLABLE);
@@ -153,7 +153,7 @@ void example_main(lv_obj_t *parent)
     lv_obj_set_style_pad_row(info, 10, 0);
 
     example_label_create(info, "Tilt Angles",
-                         &lv_font_montserrat_20, UI_COLOR_SENSOR_IMU);
+                         &lv_font_montserrat_20, lv_color_hex(0x4CAF50));
 
     /* มุมเอียง */
     example_label_create(info, "มุมเอียง",

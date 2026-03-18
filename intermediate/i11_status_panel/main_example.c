@@ -98,28 +98,26 @@ static void update_timer_cb(lv_timer_t *t)
 {
     (void)t;
 
-    /* CPU usage - simulated from idle tick ratio.
-     * In production, you would track idle task ticks vs total.
-     * Here we simulate a value based on tick count modulo. */
-    uint32_t ticks = xTaskGetTickCount();
-    uint32_t cpu_pct = 15 + (ticks / configTICK_RATE_HZ) % 40;  /* 15-55% simulated */
-    lv_label_set_text_fmt(s_cpu_card.value, "%lu %%", (unsigned long)cpu_pct);
-    set_indicator(&s_cpu_card, cpu_pct > 80 ? 2 : (cpu_pct > 60 ? 1 : 0));
-
-    /* FreeRTOS heap */
-    size_t free_heap = xPortGetFreeHeapSize();
-    size_t free_kb = free_heap / 1024;
-    lv_label_set_text_fmt(s_mem_card.value, "%lu KB free", (unsigned long)free_kb);
-    set_indicator(&s_mem_card, free_kb < 4 ? 2 : (free_kb < 16 ? 1 : 0));
-
-    /* Uptime */
-    uint32_t total_sec = ticks / configTICK_RATE_HZ;
+    /* Uptime from LVGL tick (ms) */
+    uint32_t ms = lv_tick_get();
+    uint32_t total_sec = ms / 1000;
     uint32_t hrs = total_sec / 3600;
     uint32_t min = (total_sec / 60) % 60;
     uint32_t sec = total_sec % 60;
+
+    /* CPU - simulated from uptime modulo */
+    uint32_t cpu_pct = 15 + (total_sec % 40);  /* 15-55% simulated */
+    lv_label_set_text_fmt(s_cpu_card.value, "%lu %%", (unsigned long)cpu_pct);
+    set_indicator(&s_cpu_card, cpu_pct > 80 ? 2 : (cpu_pct > 60 ? 1 : 0));
+
+    /* Memory - show core info (xPortGetFreeHeapSize not available on CM55) */
+    lv_label_set_text(s_mem_card.value, "CM55 LVGL");
+    set_indicator(&s_mem_card, 0);
+
+    /* Uptime */
     lv_label_set_text_fmt(s_uptime_card.value, "%02lu:%02lu:%02lu",
                           (unsigned long)hrs, (unsigned long)min, (unsigned long)sec);
-    set_indicator(&s_uptime_card, 0);  /* Always green */
+    set_indicator(&s_uptime_card, 0);
 
     /* Sensor status via snapshot */
     sensorhub_snapshot_t snap;

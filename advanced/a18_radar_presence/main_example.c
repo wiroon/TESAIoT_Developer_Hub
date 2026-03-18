@@ -11,7 +11,12 @@
  */
 
 #include "pse84_common.h"
+
+#if __has_include("radar_task.h")
 #include "radar_task.h"
+#else
+#error "This example requires BGT60TR13C radar (AI Kit only)"
+#endif
 
 /* ── Layout constants ───────────────────────────────────────────── */
 #define RADAR_ARC_SIZE   240

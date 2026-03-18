@@ -1,5 +1,5 @@
 /**
- * pse84_common.h — Shared header for all TESAIoT Developer Hub C examples
+ * example_common.h — Shared header for all TESAIoT Developer Hub C examples
  *
  * This header provides the common includes, macros, and forward declarations
  * needed by every example. Each example's main_example.c includes this file
@@ -7,23 +7,18 @@
  *
  * Board:   PSoC Edge E84 (KIT_PSE84_AI / KIT_PSE84_EVAL_EPC2)
  * MCU:     Cortex-M55 (display/UI) + Cortex-M33 (sensors/WiFi)
- * Display: 480×800 AMOLED, LVGL 9.2
+ * Display: 800x480 DSI LCD, LVGL 9.2
  * RTOS:    FreeRTOS 10.6
  */
 
-#ifndef PSE84_COMMON_H
-#define PSE84_COMMON_H
+#ifndef EXAMPLE_COMMON_H
+#define EXAMPLE_COMMON_H
 
 /* ── LVGL 9.2 ─────────────────────────────────────────────────────── */
 #include "lvgl.h"
 
-/* ── Infineon HAL & BSP ───────────────────────────────────────────── */
+/* ── Infineon BSP (CM55 — no cyhal.h on this core) ───────────────── */
 #include "cybsp.h"
-#include "cyhal.h"
-
-/* ── PDL GPIO (direct register access from CM55 — no IPC needed) ── */
-#include "cy_gpio.h"
-#include "cycfg_pins.h"
 
 /* ── FreeRTOS ─────────────────────────────────────────────────────── */
 #include "FreeRTOS.h"
@@ -39,28 +34,40 @@
 #include <stdint.h>
 
 /* ── BSP Feature Flags ────────────────────────────────────────────── */
-/* These are defined per-project in bsp_feature_flags.h:
- *   BSP_HAS_DPS368         — Barometric pressure sensor (AI Kit only)
- *   BSP_HAS_SHT40          — Humidity/temp sensor (AI Kit only)
- *   BSP_HAS_CAPSENSE       — CapSense touch buttons (Eva Kit only)
- *   BSP_HAS_POTENTIOMETER  — SAR ADC potentiometer (Eva Kit only)
- *   BSP_HAS_BMI270         — IMU accel/gyro (all boards)
- *   BSP_HAS_BMM350         — Magnetometer (AI Kit + Eva Kit)
- */
-#include "bsp_feature_flags.h"
+/* Defined per-project via Makefile DEFINES (BSP_HAS_XXX=1).
+ * Provide defaults if not defined: */
+#ifndef BSP_HAS_BMI270
+  #define BSP_HAS_BMI270      0
+#endif
+#ifndef BSP_HAS_BMM350
+  #define BSP_HAS_BMM350      0
+#endif
+#ifndef BSP_HAS_DPS368
+  #define BSP_HAS_DPS368      0
+#endif
+#ifndef BSP_HAS_SHT40
+  #define BSP_HAS_SHT40       0
+#endif
+#ifndef BSP_HAS_CAPSENSE
+  #define BSP_HAS_CAPSENSE    0
+#endif
+#ifndef BSP_HAS_POTENTIOMETER
+  #define BSP_HAS_POTENTIOMETER 0
+#endif
 
-/* ── Sensor I2C Common ────────────────────────────────────────────── */
-#include "sensor_i2c.h"
-
-/* ── Sensor Hub IPC (CM55 reads sensor data via IPC from CM33) ──── */
+/* ── IPC Sensor Data ─────────────────────────────────────────────── */
+/* Sensor data is pushed from CM33_NS to CM55 via IPC.
+ * Use ipc_sensorhub functions to read latest sensor values. */
 #include "ipc_sensorhub.h"
 
-/* ── Thai Font (Noto Sans Thai, ASCII + 0x0E00-0x0E7F) ──────────── */
-#include "lv_fonts_thai.h"
-
 /* ── Display Constants ────────────────────────────────────────────── */
-#define DISPLAY_WIDTH   480
-#define DISPLAY_HEIGHT  800
+#define DISPLAY_WIDTH   800
+#define DISPLAY_HEIGHT  480
+
+/* ── Board Name ───────────────────────────────────────────────────── */
+#ifndef BOARD_NAME
+  #define BOARD_NAME  "BENTO KIT_PSE84_AI"
+#endif
 
 /* ── Common Color Palette (from tesaiot_ui_theme.h) ───────────────── */
 #define UI_COLOR_PRIMARY     lv_color_hex(0x00BCD4)    /* Cyan accent       */
@@ -85,31 +92,31 @@
 #define UI_CARD_SHADOW       8
 #define UI_CARD_PAD          12
 
-/* ── GPIO Pin Access (direct from CM55 — NOT PPC-protected) ──────── */
-/*
- * Use BSP-defined macros for portable pin access across boards:
- *
- *   CYBSP_USER_LED1_PORT / _PIN   — P10.7  User LED 1 (active LOW)
- *   CYBSP_USER_LED2_PORT / _PIN   — P10.5  User LED 2 (active LOW)
- *   CYBSP_LED_RGB_RED_PORT / _PIN — P20.6  RGB Red   (AI Kit)
- *   CYBSP_LED_RGB_GREEN_PORT/_PIN — P20.4  RGB Green (AI Kit)
- *   CYBSP_LED_RGB_BLUE_PORT / _PIN— P20.5  RGB Blue  (AI Kit)
- *   CYBSP_USER_BTN1_PORT / _PIN   — P7.0   SW1 button (active LOW)
- *
- * Example:
- *   Cy_GPIO_Inv(CYBSP_USER_LED1_PORT, CYBSP_USER_LED1_PIN);  // toggle
- *   bool pressed = (Cy_GPIO_Read(CYBSP_USER_BTN1_PORT, CYBSP_USER_BTN1_PIN) == 0);
- *
- * Note: AI Kit has 1 user button (SW1). Eva Kit has 2 (SW1 + SW2).
- */
+/* ── Common GPIO Pins (KIT_PSE84_AI) ─────────────────────────────── */
+#define PIN_LED_RED       P13_7
+#define PIN_LED_GREEN     P13_4
+#define PIN_LED_BLUE      P13_3
+#define PIN_BUTTON_SW1    P5_2
+#define PIN_BUTTON_SW2    P5_3
+
+/* ── Compile-time sensor count ───────────────────────────────────── */
+#define SENSOR_COUNT  (1 /* BMI270 always present */                  \
+    + (BSP_HAS_DPS368)                                                \
+    + (BSP_HAS_SHT40)                                                 \
+    + (BSP_HAS_BMM350)                                                \
+    + (BSP_HAS_CAPSENSE)                                              \
+    + (BSP_HAS_POTENTIOMETER))
+
+/* ── Thai Font (Noto Sans Thai, ASCII + 0x0E00-0x0E7F) ──────────── */
+#include "lv_fonts_thai.h"
 
 /* ── Example Entry Point ──────────────────────────────────────────── */
 /**
  * Each example implements this function.
- * @param parent  LVGL parent object (typically the active screen or a container)
+ * @param parent  LVGL parent object (full-screen container, 800x480)
  *
- * The example framework calls this after LVGL and the display are initialized.
- * The parent is a full-screen container (480×800) with dark background.
+ * The example framework calls this after LVGL and the display are
+ * initialized. The parent has a dark background (0x0A1628).
  */
 void example_main(lv_obj_t *parent);
 
@@ -144,6 +151,9 @@ static inline lv_obj_t *example_label_create(lv_obj_t *parent, const char *text,
 
 /* ── Helper: Create a Thai label (auto-selects Noto Thai font) ────── */
 /**
+ * Create a label using Noto Sans Thai font.  Supports Thai + English + symbols
+ * in one string thanks to Montserrat fallback.
+ *
  * Usage:  thai_label(parent, "อุณหภูมิ 28.5°C", 20, UI_COLOR_TEXT);
  *
  * @param size  Font size: 14, 16, 20, or 28
@@ -165,4 +175,4 @@ static inline lv_obj_t *thai_label(lv_obj_t *parent, const char *text,
     return lbl;
 }
 
-#endif /* PSE84_COMMON_H */
+#endif /* EXAMPLE_COMMON_H */

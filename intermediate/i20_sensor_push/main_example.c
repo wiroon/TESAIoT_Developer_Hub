@@ -113,7 +113,7 @@ void example_main(lv_obj_t *parent)
 
     /* Register IPC callback + start display timer */
     memset((void *)&s_rx_buf, 0, sizeof(s_rx_buf));
-    Cy_IPC_Pipe_RegisterCallback(CY_IPC_EP_CYPIPE_CM55_ADDR,
+    Cy_IPC_Pipe_RegisterCallback(CM55_IPC_PIPE_EP_ADDR,
                                   sensor_data_cb, IPC_CMD_SENSOR_DATA);
     lv_timer_create(display_timer_cb, 100, NULL);
 }

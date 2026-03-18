@@ -67,7 +67,7 @@ static lv_obj_t *make_btn_card(lv_obj_t *parent, const char *name,
     lv_obj_set_style_radius(*ind, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(*ind, lv_color_hex(0x1A3050), 0);
     lv_obj_set_style_bg_opa(*ind, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_color(*ind, UI_COLOR_SENSOR_TOUCH, 0);
+    lv_obj_set_style_border_color(*ind, lv_color_hex(0x00BCD4), 0);
     lv_obj_set_style_border_width(*ind, 3, 0);
 
     *lbl = example_label_create(card, "IDLE", &lv_font_montserrat_16,
@@ -124,7 +124,7 @@ void example_main(lv_obj_t *parent)
     lv_bar_set_range(ctx.slider_bar, 0, 100);
     lv_bar_set_value(ctx.slider_bar, 0, LV_ANIM_OFF);
     lv_obj_set_style_bg_color(ctx.slider_bar, lv_color_hex(0x1A3050), 0);
-    lv_obj_set_style_bg_color(ctx.slider_bar, UI_COLOR_SENSOR_TOUCH,
+    lv_obj_set_style_bg_color(ctx.slider_bar, lv_color_hex(0x00BCD4),
                               LV_PART_INDICATOR);
     lv_obj_set_style_radius(ctx.slider_bar, 10, 0);
     lv_obj_set_style_radius(ctx.slider_bar, 10, LV_PART_INDICATOR);

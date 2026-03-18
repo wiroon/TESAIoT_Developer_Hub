@@ -23,8 +23,8 @@ static void send_led_cmd(bool on)
     s_tx_msg.cmd     = IPC_CMD_GPIO_LED;
     s_tx_msg.data[0] = on ? 0x01 : 0x00;
 
-    Cy_IPC_Pipe_SendMessage(CY_IPC_EP_CYPIPE_CM33_ADDR,
-                            CY_IPC_EP_CYPIPE_CM55_ADDR,
+    Cy_IPC_Pipe_SendMessage(CM33_IPC_PIPE_EP_ADDR,
+                            CM55_IPC_PIPE_EP_ADDR,
                             (uint32_t *)&s_tx_msg, NULL);
 }
 

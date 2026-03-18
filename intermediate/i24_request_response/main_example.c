@@ -42,8 +42,8 @@ static bool send_request_blocking(uint8_t query_id, uint8_t *out_value)
     s_tx_msg.data[0] = query_id;
 
     cy_en_ipc_pipe_status_t st =
-        Cy_IPC_Pipe_SendMessage(CY_IPC_EP_CYPIPE_CM33_ADDR,
-                                CY_IPC_EP_CYPIPE_CM55_ADDR,
+        Cy_IPC_Pipe_SendMessage(CM33_IPC_PIPE_EP_ADDR,
+                                CM55_IPC_PIPE_EP_ADDR,
                                 (uint32_t *)&s_tx_msg, NULL);
     if (st != CY_IPC_PIPE_SUCCESS) return false;
 
@@ -136,6 +136,6 @@ void example_main(lv_obj_t *parent)
     lv_obj_center(btn_lbl);
 
     /* Register response callback */
-    Cy_IPC_Pipe_RegisterCallback(CY_IPC_EP_CYPIPE_CM55_ADDR,
+    Cy_IPC_Pipe_RegisterCallback(CM55_IPC_PIPE_EP_ADDR,
                                   response_cb, IPC_CMD_QUERY_RSP);
 }

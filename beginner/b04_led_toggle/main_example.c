@@ -15,6 +15,20 @@
 
 #include "pse84_common.h"
 
+/* LED pin compatibility: AI Kit uses CYBSP_LED_RGB_*, Eva Kit uses CYBSP_LED_* */
+#ifndef CYBSP_LED_RGB_RED_PORT
+#define CYBSP_LED_RGB_RED_PORT    CYBSP_LED_RED_PORT
+#define CYBSP_LED_RGB_RED_PIN     CYBSP_LED_RED_PIN
+#endif
+#ifndef CYBSP_LED_RGB_GREEN_PORT
+#define CYBSP_LED_RGB_GREEN_PORT  CYBSP_LED_GREEN_PORT
+#define CYBSP_LED_RGB_GREEN_PIN   CYBSP_LED_GREEN_PIN
+#endif
+#ifndef CYBSP_LED_RGB_BLUE_PORT
+#define CYBSP_LED_RGB_BLUE_PORT   CYBSP_LED_BLUE_PORT
+#define CYBSP_LED_RGB_BLUE_PIN    CYBSP_LED_BLUE_PIN
+#endif
+
 /* Map 3 on-screen LEDs to real GPIO pins */
 static GPIO_PRT_Type *const s_led_ports[3] = {
     CYBSP_LED_RGB_RED_PORT,

@@ -115,7 +115,7 @@ static void timer_cb(lv_timer_t *t)
         int tv = (int)((temp_c + 10.0f) * 1000.0f / 60.0f);
         if (tv < 0) tv = 0; if (tv > 1000) tv = 1000;
         lv_arc_set_value(ctx->arc_temp, tv);
-        lv_label_set_text_fmt(ctx->lbl_temp, "%.1f\n" LV_SYMBOL_DEGREES "C",
+        lv_label_set_text_fmt(ctx->lbl_temp, "%.1f\n°C",
                               (double)temp_c);
 
         /* Humidity arc: 0-100 mapped to 0-1000 */
