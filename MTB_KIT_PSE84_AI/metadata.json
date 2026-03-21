@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "template_id": "mtb-kit-pse84-ai",
+  "template_type": "firmware",
+  "display_name": "PSoC Edge AI Kit — ModusToolbox Template",
+  "description": "ModusToolbox project template for KIT_PSE84_AI. Drop a main_example.c from TESAIoT Developer Hub into proj_cm55/app/ and build.",
+  "board": {
+    "id": "ifx.psoc_edge_e84.ai_kit_sensor_hub",
+    "display_name": "PSoC Edge E84 AI Kit",
+    "bsp": "KIT_PSE84_AI",
+    "architecture": "arm-cortex-m55"
+  },
+  "toolchain": {
+    "ide": "ModusToolbox",
+    "ide_version": ">=3.6",
+    "compiler": "GCC_ARM",
+    "build_system": "Make"
+  },
+  "download": {
+    "url": "https://github.com/wiroon/TESAIoT_Developer_Hub/releases/download/v1.0.0/MTB_KIT_PSE84_AI.zip",
+    "format": "zip"
+  },
+  "links": {
+    "repository": "https://github.com/wiroon/TESAIoT_Developer_Hub",
+    "readme": "https://github.com/wiroon/TESAIoT_Developer_Hub/blob/MTB_Templates/MTB_KIT_PSE84_AI/README.md",
+    "documentation": ""
+  },
+  "quick_start_steps": [
+    "Download and extract the ZIP to a short path (e.g. C:\\mtb\\AI_Kit\\)",
+    "Run `make getlibs` to fetch shared MTB libraries (one-time)",
+    "Replace proj_cm55/app/main_example.c with your example from Developer Hub",
+    "For WiFi examples: edit proj_cm55/wifi_config.h with your SSID/password",
+    "Run `make build -j` to build all 3 cores",
+    "Run `make program` to flash to board"
+  ],
+  "tags": ["infineon", "psoc-edge-e84", "ai-kit", "modustoolbox", "micropython", "sensor-hub"],
+  "version": "1.0.0",
+  "updated_at": "2026-03-21T00:00:00Z"
+}
